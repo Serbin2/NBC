@@ -3,7 +3,10 @@
 
 #include <iostream>
 #include "Picnic.h"
+#include "BoardCover.h"
 
+
+#include <vector>
 
 
 int main()
@@ -18,6 +21,34 @@ int main()
     int out = picnic(numOfStudent, friendsList);
     std::cout<< out;
     std::cout<<std::endl;
+
+
+    //  보드커버 테스트용 입력 만들기
+    std::vector<std::vector<int>> board;
+
+    for (int i = 0; i < 10; i++)
+    {
+        std::vector<int> line;
+        for (int j = 0; j < 8; j++)
+        {
+            if (j == 0 || j == 7 || i == 0 || i == 9)
+            {
+                line.push_back(1);
+            }
+            else
+            {
+                line.push_back(0);
+            }
+        }
+        board.push_back(line);
+    }
+
+    int bcOut = 0;
+    bcOut = BoardCover(board);
+
+    std::cout << bcOut;
+    std::cout << std::endl;
+
 
 }
 

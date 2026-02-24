@@ -125,10 +125,12 @@
   <ItemGroup>
     <ClCompile Include="AlgoStudy.cpp" />
     <ClCompile Include="AlgoTest.cpp" />
+    <ClCompile Include="BoardCover.cpp" />
     <ClCompile Include="Picnic.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlgoTest.h" />
+    <ClInclude Include="BoardCover.h" />
     <ClInclude Include="Picnic.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
