@@ -13,6 +13,7 @@ float FindShortestPath(int numberOfCities, float distance[MAX_CITIES][MAX_CITIES
 	//	numberOfCities to g_Cities
 	//	distance to g_Dist
 
+	return 1;
 }
 
 
@@ -42,4 +43,5 @@ float ShortestPath(std::vector<int>& path, std::vector<bool> visited, float curr
 
 	}
 
+	return 1;
 }

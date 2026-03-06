@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{7f674dc7-62de-4a8d-a738-92b73b1c24e3}</ProjectGuid>
-    <RootNamespace>AlgoStudy</RootNamespace>
+    <ProjectGuid>{af100047-66d8-4b25-84a7-04870c65f8cb}</ProjectGuid>
+    <RootNamespace>Task02</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -123,17 +123,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AlgoStudy.cpp" />
-    <ClCompile Include="AlgoTest.cpp" />
-    <ClCompile Include="BoardCover.cpp" />
-    <ClCompile Include="Picnic.cpp" />
-    <ClCompile Include="salesman.cpp" />
+    <ClCompile Include="Archer.cpp" />
+    <ClCompile Include="Magician.cpp" />
+    <ClCompile Include="Monster.cpp" />
+    <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Task02.cpp" />
+    <ClCompile Include="Thief.cpp" />
+    <ClCompile Include="Warrior.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AlgoTest.h" />
-    <ClInclude Include="BoardCover.h" />
-    <ClInclude Include="Picnic.h" />
-    <ClInclude Include="Salesman.h" />
+    <ClInclude Include="Archer.h" />
+    <ClInclude Include="Magician.h" />
+    <ClInclude Include="Monster.h" />
+    <ClInclude Include="Player.h" />
+    <ClInclude Include="Thief.h" />
+    <ClInclude Include="Warrior.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

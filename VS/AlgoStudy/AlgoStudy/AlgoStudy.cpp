@@ -5,10 +5,59 @@
 #include "Picnic.h"
 #include "BoardCover.h"
 
-
 #include <vector>
 
+#include <math.h>
 
+int isPrime(int a)
+{
+    //if(a==0)    return 0;
+    int s = sqrt((float)a)+1;
+    for (int i = 2; i < s; i++)
+    {
+        if ((a % i) == 0)
+        {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int PickNum(int depth, int nums[], int pickIndex, int picked[], size_t nums_len)
+{
+    if (depth == 3)
+    {
+        int result = picked[0] + picked[1] + picked[2];
+        return isPrime(result);
+    }
+
+    int answer = 0;
+    int end = nums_len - (2 - depth);
+    for (int i = pickIndex; i < end; i++)
+    {
+        picked[depth] = nums[i];
+        answer += PickNum(depth + 1, nums, i + 1, picked, nums_len);
+    }
+    return answer;
+}
+
+// nums_len은 배열 nums의 길이입니다.
+int solution(int nums[], size_t nums_len) {
+    int pick[3] = { 0, };
+    int answer = PickNum(0, nums, 0, pick, nums_len);
+    return answer;
+}
+
+int main(void)
+{
+    int arr[4] = { 1,2,3,4 };
+    int ans = solution(arr, 4);
+
+    return 0;
+}
+
+
+/*
 int main()
 {
     std::cout << "Hello World!\n";
@@ -22,7 +71,7 @@ int main()
     std::cout<< out;
     std::cout<<std::endl;
 
-
+  
     //  보드커버 테스트용 입력 만들기
     std::vector<std::vector<int>> board;
 
@@ -50,7 +99,7 @@ int main()
     std::cout << std::endl;
 
 
-}
+}*/
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
 // 프로그램 디버그: <F5> 키 또는 [디버그] > [디버깅 시작] 메뉴
