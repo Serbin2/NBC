@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{7f674dc7-62de-4a8d-a738-92b73b1c24e3}</ProjectGuid>
-    <RootNamespace>AlgoStudy</RootNamespace>
+    <ProjectGuid>{7158b397-8453-47c1-aa74-4abdb623a07b}</ProjectGuid>
+    <RootNamespace>Task03</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -123,17 +123,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="AlgoStudy.cpp" />
-    <ClCompile Include="AlgoTest.cpp" />
-    <ClCompile Include="BoardCover.cpp" />
-    <ClCompile Include="Picnic.cpp" />
-    <ClCompile Include="salesman.cpp" />
+    <ClCompile Include="Inventory.cpp" />
+    <ClCompile Include="Item.cpp" />
+    <ClCompile Include="Task03.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AlgoTest.h" />
-    <ClInclude Include="BoardCover.h" />
-    <ClInclude Include="Picnic.h" />
-    <ClInclude Include="Salesman.h" />
+    <ClInclude Include="Inventory.h" />
+    <ClInclude Include="Item.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
