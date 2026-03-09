@@ -8,7 +8,7 @@ using namespace std;
 
 class IPlayer
 {
-public:
+public:		//	누구나 접근 가능
 	IPlayer();
 	IPlayer(string name);
 	virtual ~IPlayer() {};
@@ -39,10 +39,10 @@ public:
 	void SetSPD(int spd) { m_iDEF = spd; };
 
 
-private:
+private:	//	자손도 접근 불가
 
 
-protected:
+protected:	//	자손은 접근 가능
 
 	string m_sClassName;
 	string m_sUserName;

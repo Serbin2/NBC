@@ -1,4 +1,3 @@
 ﻿  AlgoStudy.cpp
-C:\Users\njh10\Documents\NBC\VS\AlgoStudy\AlgoStudy\AlgoStudy.cpp(15,11): warning C4244: '초기화 중': 'float'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
-C:\Users\njh10\Documents\NBC\VS\AlgoStudy\AlgoStudy\AlgoStudy.cpp(35,13): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\njh10\Documents\NBC\VS\AlgoStudy\AlgoStudy\AlgoStudy.cpp(60): warning C4172: 지역 변수 또는 임시: answer의 주소를 반환하고 있습니다.
   AlgoStudy.vcxproj -> C:\Users\njh10\Documents\NBC\VS\AlgoStudy\x64\Debug\AlgoStudy.exe
