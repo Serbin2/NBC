@@ -13,8 +13,8 @@ public:		//	누구나 접근 가능
 	IPlayer(string name);
 	virtual ~IPlayer() {};
 
-	virtual void Attack() = 0;
-	virtual void Attack(CMonster* pMonster);
+	virtual void Attack() = 0;					//	순수 가상 함수
+	virtual void Attack(CMonster* pMonster);	//	가상 함수
 	void PrintPlayerStatus();
 	void PrintRemainHP();
 
