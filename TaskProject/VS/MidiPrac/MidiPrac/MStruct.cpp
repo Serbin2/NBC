@@ -110,21 +110,48 @@ uint32_t CMidi::ReadVLQ(FILE* fp)
 
 void CMidi::ParseEvents(FILE* fp, uint32_t trackLength)
 {
+	MidiEvent mEvent;
 	uint32_t time = 0;
-
+	uint8_t running = None;
 	while (trackLength > 0)
 	{
 		uint32_t delta = ReadVLQ(fp);
-		time += delta;
+		time = delta;
 
-		uint8_t status = fgetc(fp);
+		uint8_t bt = fgetc(fp);	//	여기서 running status 체크를 해야함
+		if (bt < eStatus::NoteOff)
+		{	//	data를 받고있으므로 running status임
+
+		}
+		uint8_t status = bt & 0xF0;
+		uint8_t channel = bt & 0x0F;
+
+		eStatus event = (eStatus)status;
+		switch (event)
+		{
+		case NoteOff:
+			uint8_t note = fgetc(fp);
+			uint8_t velocity = fgetc(fp);
+			mEvent.time = delta;
+			mEvent.type = bt;
+			mEvent.data1 = note;
+			mEvent.data2 = velocity;
+			events.push_back(mEvent);
+			break;
+		case NoteOn:
+			uint8_t note = fgetc(fp);
+			uint8_t velocity = fgetc(fp);
+			break;
+		}
+
 
 		if ((status & 0xF0) == 0x90)	//	1111 0000
 		{
 			uint8_t note = fgetc(fp);
 			uint8_t velocity = fgetc(fp);
 
-			printf("NoteOn %d time %d\n", note, time);
+			//printf("NoteOn %d time %d\n", note, time);
+			
 		}
 	}
 }

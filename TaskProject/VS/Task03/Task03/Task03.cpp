@@ -38,6 +38,14 @@ int main()
     std::cout << "정렬" << std::endl;
     inven.PrintAllItems();
 
+	//	복사 생성자 사용
+	TInventory<CItem> copyInven(inven);
+	copyInven.PrintAllItems();
+
+	//	Assign 함수 사용
+	copyInven.Assign(inven);
+	copyInven.PrintAllItems();
+
     return 0;
 }
 

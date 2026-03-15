@@ -37,6 +37,34 @@ struct MidiEvent
 	uint8_t data2;
 };
 
+typedef enum MidiEventStatus
+{
+	None = 0,
+
+	//	Channel Event 0x80~ 0xEF
+	//	상위 바이트 = 이벤트 종류, 하위 바이트 = 채널 번호
+	//	Status는 항상 0x80 이상이므로 그 이하의 값을 받았으면 running status로
+	NoteOff	= 0b10000000,	//	data1 : 0kkkkkkk NoteNumber, data2 : 0vvvvvvv velocity
+	NoteOn	= 0b10010000,	//	data1 : 0kkkkkkk NoteNumber, data2 : 0vvvvvvv velocity  *velocity = 0 은 NoteOff와 같습니다
+	PolyphonicKeyPressure = 0b10100000,
+	ContolChange = 0b10110000,	//	data1 : controller, data2 : value
+	//	대표적인 controller 목록 : 
+	//	1 : modulation		7 : volume		10 : pan		64 : sustain pedal
+
+	ProgramChange = 0b11000000,	//	악기 변경	data1 : program
+	ChannelPressure = 0b11010000,
+	PitchBend = 0b11100000,		//	LSB, MSB	,	14bit 값입니다
+
+	SystemExclusive = 0b11110000,	//	특정 장치용 데이터입니다	-	대부분 skip
+	MetaEvent = 0b11111111,	//	type length data
+	//0x2F	End of Track
+	//0x51	Tempo
+	//0x03	Track Name
+	//0x58	Time Signature
+	//0x59	Key Signature
+
+}eStatus;
+
 class CMidi
 {
 public:
