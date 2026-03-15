@@ -24,7 +24,7 @@ public:
 
 private:
 
-	T* m_pArrItems;
+	T* m_pArrItems;		//	인벤토리 동적 배열
 	int m_iCapacity;	//	인벤토리의 최대 크기
 	int m_iSize;		//	인벤토리에 저장된 아이템 수
 };
@@ -52,18 +52,11 @@ TInventory<T>::~TInventory()
 }
 
 template<typename T>
-TInventory<T>::TInventory(const TInventory<T>& other)
+TInventory<T>::TInventory(const TInventory<T>& other)	//	other : 이미 생성되어있는 다른 객체
 {
 	this->m_iCapacity = other.m_iCapacity;
 	this->m_iSize = other.m_iSize;
-	this->m_pArrItems = nullptr;
 	this->m_pArrItems = new T[this->m_iCapacity];
-	if (this->m_pArrItems == nullptr)
-	{
-		cout << "인벤토리 복사 실패" << endl;
-		return;
-	}
-
 	for (int i = 0; i < this->m_iSize; i++)
 	{
 		this->m_pArrItems[i] = other.m_pArrItems[i];
@@ -83,6 +76,7 @@ void TInventory<T>::Assign(const TInventory<T>& other)
 	{
 		this->m_pArrItems[i] = other.m_pArrItems[i];
 	}
+	cout << "인벤토리 복사 완료" << endl;
 }
 
 template<typename T>
