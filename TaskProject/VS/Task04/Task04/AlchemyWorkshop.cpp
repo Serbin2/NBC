@@ -33,6 +33,7 @@ void CAlchemyWorkshop::displayAllRecipes() const
 			}
 		}
 		std::cout << std::endl;
+		std::cout << "재고 : " << m_aRecipes[i].GetStock() << std::endl;
 	}
 	std::cout << "---------------------------\n";
 }
@@ -53,7 +54,7 @@ CPotionRecipe* CAlchemyWorkshop::FindPotionByName(string name)
 }
 
 bool CAlchemyWorkshop::FindPotionsByKeyword(string keyword, vector<CPotionRecipe>& outvec)
-{
+{	//	키워드로 물약 찾기
 	vector<CPotionRecipe> tempvec;
 	bool retval = false;
 

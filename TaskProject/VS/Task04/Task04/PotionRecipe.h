@@ -13,6 +13,7 @@ public:
 
 	string GetName() const { return m_sPotionName; };
 	vector<string> GetIngredients() const { return m_asIngredients; };
+	int GetStock() const { return m_iStock; };
 	bool HasIngredient(string name);
 	bool HasKeyword(string key);
 

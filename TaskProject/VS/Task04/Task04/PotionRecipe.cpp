@@ -60,7 +60,7 @@ void CPotionRecipe::AddStock(int qt)
 	m_iStock += qt;
 
 	if (m_iStock > 3)
-	{
+	{	//	재고는 최대 세개입니다
 		m_iStock = 3;
 	}
 }
