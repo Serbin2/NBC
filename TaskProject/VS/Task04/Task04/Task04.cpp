@@ -196,7 +196,14 @@ int main() {
 		}
 		else if (choice == 6)
 		{	//	공병 돌려주기
-
+			//	공병 목록 출력
+			for (auto it : bottle)
+			{
+				std::cout << "이름 : " << it.first << "  수량 : " << it.second << std::endl;
+				myWorkshop.FindPotionByName(it.first)->AddStock(it.second);
+				it.second = 0;
+			}
+			std::cout << "빈 병을 모두 반납했습니다." << std::endl;
 		}
 		else if (choice == 7) 
 		{
@@ -210,18 +217,4 @@ int main() {
 	}
 
 	return 0;
-}
-
-
-void ReturnBottle()
-{
-	bool stock = false;
-
-	for (auto it : bottle)
-	{
-		if (it.second > 0)
-		{
-
-		}
-	}
 }
