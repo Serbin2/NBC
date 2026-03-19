@@ -1,14 +1,23 @@
 #include "MStruct.h"
 
+CMidi::CMidi()
+{
+	tickToMs = (double)500000 / (double)480;
+}
 
+CMidi::~CMidi()
+{
+
+}
 
 
 void CMidi::FileOpen(string fileName)
 {
 	//	파일 열기
-	FILE* fp = fopen(fileName.c_str(), "rb");
+	FILE* fp;
+	int err = fopen_s(&fp, fileName.c_str(), "rb");
 
-	if (!fp)
+	if (err != 0 || !fp)
 	{//	파일 열기 실패
 		return;
 	}
@@ -19,10 +28,12 @@ void CMidi::FileOpen(string fileName)
 	//format	(2byte)
 	//tracks	(2byte)
 	//division	(2byte)
-	char chunk[4];
+	char chunk[5];
 	fread(chunk, 1, 4, fp); // MThd
+	chunk[4] = '\n';
 	if (!strncmp(chunk, "Mthd", 4))
-	{
+	{	
+		//	midi 파일이 아님
 		fclose(fp);
 		return;
 	}
@@ -31,29 +42,28 @@ void CMidi::FileOpen(string fileName)
 
 	MidiHeader header;
 
+	header.length = length;
 	header.format = ReadBE16(fp);
 	header.tracks = ReadBE16(fp);
 	header.division = ReadBE16(fp);
 
 	m_sMidiHeader = header;
 
+	for (uint16_t i = 0; i < header.tracks; i++)
+	{
+		//	Track Chunk
+		//"MTrk"	(4byte)
+		//length	(4byte)
+		//event data
+		char trackID[4];
+		fread(trackID, 1, 4, fp);
 
-	//	Track Chunk
-	//"MTrk"	(4byte)
-	//length	(4byte)
-	//event data
+		uint32_t length = ReadBE32(fp);
+
+		MidiTrack track = ParseEvents(fp, length, i);
+		tracks.push_back(track);
+	}
 	
-	char trackID[4];
-	fread(trackID, 1, 4, fp);
-
-	uint32_t length = ReadBE32(fp);
-
-	//	MIDI event
-	//delta_time	(vlq)
-	//event			(0xF?)
-
-
-
 	fclose(fp);
 	return;
 }
@@ -85,7 +95,7 @@ void CMidi::ParseTracks(FILE* fp, int trackCount)
 
 		uint32_t length = ReadBE32(fp);
 
-		ParseEvents(fp, length);
+		ParseEvents(fp, length, i);
 	}
 }
 
@@ -94,10 +104,12 @@ void CMidi::ParseTracks(FILE* fp, int trackCount)
 uint32_t CMidi::ReadVLQ(FILE* fp)
 {
 	uint32_t value = 0;
+	LastVLQlen = 0;
 
 	while (1)
 	{
 		uint8_t c = fgetc(fp);
+		LastVLQlen++;
 
 		value = (value << 7) | (c & 0x7F);	// 0111 1111
 
@@ -108,50 +120,144 @@ uint32_t CMidi::ReadVLQ(FILE* fp)
 	return value;
 }
 
-void CMidi::ParseEvents(FILE* fp, uint32_t trackLength)
+uint32_t CMidi::GetLastVLQlen()
 {
-	MidiEvent mEvent;
+	uint32_t retVal = LastVLQlen;
+	LastVLQlen = 0;
+	return retVal;
+}
+
+MidiTrack CMidi::ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumber)
+{
+	MidiTrack track;
+	track.trackNumber = trackNumber;
+
 	uint32_t time = 0;
+	unsigned long long absTime = 0;
 	uint8_t running = None;
+	uint8_t runningChannel = 0;
 	while (trackLength > 0)
 	{
+		bool meta = false;
+		MidiEvent mEvent;
 		uint32_t delta = ReadVLQ(fp);
+		trackLength -= GetLastVLQlen();
 		time = delta;
-
+		absTime += time;
 		uint8_t bt = fgetc(fp);	//	여기서 running status 체크를 해야함
+		trackLength--;
+		uint8_t data1 = 0;
+		uint8_t data2 = 0;
 		if (bt < eStatus::NoteOff)
 		{	//	data를 받고있으므로 running status임
-
+			switch (running)
+			{
+			case NoteOff:
+			case NoteOn:
+			case PolyphonicKeyPressure:
+			case ControlChange:
+			case PitchBend:
+				//	데이터 두개
+				data1 = bt;
+				data2 = fgetc(fp);
+				trackLength--;
+				break;
+			case ProgramChange:
+			case ChannelPressure:
+				//	데이터 한개
+				data1 = bt;
+				break;
+			default:
+				//	running status에선 SysEx나 MetaEvent가 나오지 않음.
+				break;
+			}
 		}
-		uint8_t status = bt & 0xF0;
-		uint8_t channel = bt & 0x0F;
-
-		eStatus event = (eStatus)status;
-		switch (event)
+		else
 		{
-		case NoteOff:
-			uint8_t note = fgetc(fp);
-			uint8_t velocity = fgetc(fp);
-			mEvent.time = delta;
-			mEvent.type = bt;
-			mEvent.data1 = note;
-			mEvent.data2 = velocity;
-			events.push_back(mEvent);
-			break;
-		case NoteOn:
-			uint8_t note = fgetc(fp);
-			uint8_t velocity = fgetc(fp);
-			break;
+			uint8_t status = bt & 0xF0;
+			uint8_t channel = bt & 0x0F;
+
+			switch (status)
+			{
+			case NoteOff:
+			case NoteOn:
+			case PolyphonicKeyPressure:
+			case ControlChange:
+			case PitchBend:
+				//	데이터 두개
+				data1 = fgetc(fp);
+				data2 = fgetc(fp);
+				running = status;
+				runningChannel = channel;
+				trackLength -= 2;
+				break;
+			case ProgramChange:
+			case ChannelPressure:
+				//	데이터 한개
+				data1 = fgetc(fp);
+				running = status;
+				runningChannel = channel;
+				trackLength--;
+				break;
+			default:
+				//	Sysex or Meta event
+				meta = true;
+				if (bt == SystemExclusive)
+				{	//	처리하지 않습니다
+					uint32_t length = ReadVLQ(fp);
+					trackLength -= GetLastVLQlen();
+					for (uint32_t i = 0; i < length; i++)
+					{
+						fgetc(fp);
+						trackLength--;
+					}
+				}
+				else if (bt == MetaEvent)
+				{
+					uint8_t type = fgetc(fp);
+					trackLength--;
+					uint32_t length = ReadVLQ(fp);
+					trackLength -= GetLastVLQlen();
+					if (type == 0x51)
+					{
+						// tempo 처리
+						uint32_t tempo = 0;
+						tempo |= fgetc(fp) << 16;
+						tempo |= fgetc(fp) << 8;
+						tempo |= fgetc(fp);
+						trackLength -= 3;
+						track.tempo = tempo;
+						tickToMs = ((double)tempo / (double)1000.0) / (double)m_sMidiHeader.division;
+					}
+					else if (type == 0x2F)
+					{
+						// End of Track
+						return track;
+					}
+					else
+					{
+						// 나머지는 skip
+						for (uint32_t i = 0; i < length; i++)
+						{
+							fgetc(fp);
+							trackLength--;
+						}
+					}
+				}
+			}
 		}
 
+		if (meta)	continue;
 
-		if ((status & 0xF0) == 0x90)	//	1111 0000
-		{
-			uint8_t note = fgetc(fp);
-			uint8_t velocity = fgetc(fp);
-
-			//printf("NoteOn %d time %d\n", note, time);
-			
-		}
+		mEvent.absTime = (double)absTime * tickToMs;
+		mEvent.time = delta;
+		mEvent.type = running | runningChannel;
+		mEvent.eEvent = (eStatus)running;
+		mEvent.channel = runningChannel;
+		mEvent.data1 = data1;
+		mEvent.data2 = data2;
+		track.events.push_back(mEvent);
 	}
+
+	return track;
 }
