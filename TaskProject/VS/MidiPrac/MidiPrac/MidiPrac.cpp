@@ -3,8 +3,20 @@
 
 #include "framework.h"
 #include "MidiPrac.h"
+#include "MidiPlayer.h"
 
 #define MAX_LOADSTRING 100
+
+//string path = "./goit.mid";
+string path = "./take5.mid";
+
+
+int main()
+{
+	MidiPlayer mid(path);
+	mid.PlayAllTrack2();
+	return 0;
+}
 
 // 전역 변수:
 HINSTANCE hInst;                                // 현재 인스턴스입니다.
@@ -41,6 +53,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MIDIPRAC));
 
     MSG msg;
+	MidiPlayer mid(path);
 
     // 기본 메시지 루프입니다:
     while (GetMessage(&msg, nullptr, 0, 0))
