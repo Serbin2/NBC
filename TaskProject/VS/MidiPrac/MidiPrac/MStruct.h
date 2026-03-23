@@ -4,8 +4,10 @@
 #include <mmsystem.h>
 #include <string>
 #include <vector>
+#include "include/fluidsynth.h"
 
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "lib/libfluidsynth-3.lib")
 
 using namespace std;
 
@@ -53,17 +55,18 @@ typedef enum MidiEventStatus
 	SystemExclusive = 0b11110000,	//	특정 장치용 데이터입니다	-	대부분 skip
 	EndofSysEx = 0b11110111,
 	MetaEvent = 0b11111111,	//	type length data
-	//0x2F	End of Track
-	//0x51	Tempo
-	//0x03	Track Name
-	//0x58	Time Signature
-	//0x59	Key Signature
+	//0x2F 47	End of Track
+	//0x51 81	Tempo
+	//0x03 03	Track Name
+	//0x58 88	Time Signature
+	//0x59 89	Key Signature
 
 }eStatus;
 
 struct MidiEvent
 {
-	double absTime;
+	double absTime = 0;
+	double accuTime = 0;
 	uint32_t time = 0;
 	uint8_t type = 0;	//	Event | channel
 	eStatus eEvent = None;
@@ -71,6 +74,8 @@ struct MidiEvent
 
 	uint8_t data1 = 0;
 	uint8_t data2 = 0;
+	uint32_t longData = 0;
+	char sysex[20] = { 0, };
 };
 
 struct MidiTrack
@@ -78,7 +83,6 @@ struct MidiTrack
 	uint16_t trackNumber = 0;
 	uint32_t length = 0;
 	vector<MidiEvent> events;
-	uint32_t tempo = 500000;
 };
 
 class CMidi
@@ -90,20 +94,25 @@ public:
 	void FileOpen(string fileName);
 	vector<MidiTrack> GetTrack() { return tracks; };
 	MidiHeader GetHeader() { return m_sMidiHeader; };
+	double GetGlobalOffset() { return globalOffset; };
 
 
 protected:
 	uint16_t ReadBE16(FILE* fp);	//	빅엔디안 2바이트 읽기
 	uint32_t ReadBE32(FILE* fp);	//	빅엔디안 4바이트 읽기
-	void ParseTracks(FILE* fp, int trackCount);
+	//void ParseTracks(FILE* fp, int trackCount);
 	uint32_t GetLastVLQlen();
 	uint32_t ReadVLQ(FILE* fp);		//	이벤트 읽기
 	MidiTrack ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumber);
 
 private:
 
-	double tickToMs;
 	uint32_t LastVLQlen;
 	MidiHeader m_sMidiHeader;
 	vector<MidiTrack> tracks;
+	double globalOffset = 0;
+
+	bool bBankOn = false;
+	uint8_t bankMSB = 0;
+	uint8_t bankLSB = 0;
 };
