@@ -10,35 +10,23 @@
 #include <stdlib.h>
 #include <math.h>
 #include <vector>
-#include <iostream>
 
-// Main.cpp
-
-#include <iostream>
-
-int FindMax(const int Arr[], int N)
-{
-	int Max = Arr[0];
-
-	for (int i = 1; i <= N; i++)
+int solution(int n) {
+	int answer = 0;
+	if (n < 2)
 	{
-		if (Max < Arr[i])
+		return n;
+	}
+	for (int i = 2; i < n; i++)
+	{
+		if (n % i == 0)
 		{
-			Max = Arr[i];
+			answer += i;
 		}
 	}
+	answer += 1 + n;
 
-	return Max;
-}
-
-int main(void)
-{
-	int Data[5] = { 3, 7, 2, 9, 1 };
-
-	int Max = FindMax(Data, 5);
-	std::cout << "Max = " << Max << std::endl;
-
-	return 0;
+	return answer;
 }
 
 

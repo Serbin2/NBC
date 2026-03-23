@@ -7,15 +7,14 @@
 
 #define MAX_LOADSTRING 100
 
-//string path = "./goit.mid";	//	일부 악기 음량, 재생 이상함
-//string path = "./take5.mid";	//	모든 악기 피아노로 나옴, 파일 앞에 공백 너무 김
-string path = "./grieg-hall-of-the-mountain-king-from-peer-gynt-suite-1.mid";
+//string path = "./goit.mid";
+string path = "./take5.mid";
 
 
 int main()
 {
 	MidiPlayer mid(path);
-	mid.PlayAllTrack3();
+	mid.PlayAllTrack2();
 	return 0;
 }
 

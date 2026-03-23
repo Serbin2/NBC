@@ -1,12 +1,8 @@
-ï»¿#include "MStruct.h"
-#include <assert.h>
-#include <stdio.h>
-#include <string>
-#include <math.h>
+#include "MStruct.h"
 
 CMidi::CMidi()
 {
-	LastVLQlen = 0;
+	tickToMs = (double)500000 / (double)480;
 }
 
 CMidi::~CMidi()
@@ -17,19 +13,18 @@ CMidi::~CMidi()
 
 void CMidi::FileOpen(string fileName)
 {
-	//	íŒŒì¼ ì—´ê¸°
+	//	ÆÄÀÏ ¿­±â
 	FILE* fp;
 	int err = fopen_s(&fp, fileName.c_str(), "rb");
 
 	if (err != 0 || !fp)
-	{//	íŒŒì¼ ì—´ê¸° ì‹¤íŒ¨
+	{//	ÆÄÀÏ ¿­±â ½ÇÆĞ
 		return;
 	}
-	printf("FileOpen\n");
 
-	//	í—¤ë” ì½ê¸°
+	//	Çì´õ ÀĞ±â
 	//"MThd"	(4byte)
-	//length	(4byte)	//	í—¤ë”ì˜ í¬ê¸°
+	//length	(4byte)	//	Çì´õÀÇ Å©±â
 	//format	(2byte)
 	//tracks	(2byte)
 	//division	(2byte)
@@ -38,7 +33,7 @@ void CMidi::FileOpen(string fileName)
 	chunk[4] = '\n';
 	if (!strncmp(chunk, "Mthd", 4))
 	{	
-		//	midi íŒŒì¼ì´ ì•„ë‹˜
+		//	midi ÆÄÀÏÀÌ ¾Æ´Ô
 		fclose(fp);
 		return;
 	}
@@ -48,27 +43,9 @@ void CMidi::FileOpen(string fileName)
 	MidiHeader header;
 
 	header.length = length;
-	printf("length : %d\n", length);
 	header.format = ReadBE16(fp);
-	printf("format : %d\n", header.format);
 	header.tracks = ReadBE16(fp);
-	printf("tracks : %d\n", header.tracks);
 	header.division = ReadBE16(fp);
-	printf("div : %d\n", header.division);
-
-	if ((header.division & 0x8000) == 0) 
-	{	//	tick per quater note
-		uint16_t ticks_per_qn = header.division & 0x7FFF;  // 96
-		printf("tpqn\n");
-	}
-	else
-	{	//	SMPTE
-		 // ìƒìœ„ ë°”ì´íŠ¸ì˜ í•˜ìœ„ 7ë¹„íŠ¸ = ìŒìˆ˜ SMPTE fps
-		int8_t smpte_fps = (int8_t)((header.division >> 8) & 0x7F);
-		uint8_t ticks_per_frame = header.division & 0x00FF;
-		printf("SMPTE\n");
-	}
-
 
 	m_sMidiHeader = header;
 
@@ -85,7 +62,6 @@ void CMidi::FileOpen(string fileName)
 
 		MidiTrack track = ParseEvents(fp, length, i);
 		tracks.push_back(track);
-		//Sleep(1000);
 	}
 	
 	fclose(fp);
@@ -110,21 +86,21 @@ uint32_t CMidi::ReadBE32(FILE* fp)
 	return (b1 << 24) | (b2 << 16) | (b3 << 8) | b4;
 }
 
-//void CMidi::ParseTracks(FILE* fp, int trackCount)
-//{
-//	for (int i = 0; i < trackCount; i++)
-//	{
-//		char id[4];
-//		fread(id, 1, 4, fp);	//	MTrk
-//
-//		uint32_t length = ReadBE32(fp);
-//
-//		ParseEvents(fp, length, i);
-//	}
-//}
+void CMidi::ParseTracks(FILE* fp, int trackCount)
+{
+	for (int i = 0; i < trackCount; i++)
+	{
+		char id[4];
+		fread(id, 1, 4, fp);	//	MTrk
 
-//	ìƒìœ„ ë¹„íŠ¸ 1 -> ë‹¤ìŒ ë°”ì´íŠ¸ ìˆìŒ / ìƒìœ„ ë¹„íŠ¸ 0 -> ë§ˆì§€ë§‰ ë°”ì´íŠ¸ì„
-//	ë°ì´í„°ë¥¼ 7ë¹„íŠ¸ ë‹¨ìœ„ë¡œ ëì–´ì„œ ì €ì¥í•¨
+		uint32_t length = ReadBE32(fp);
+
+		ParseEvents(fp, length, i);
+	}
+}
+
+//	»óÀ§ ºñÆ® 1 -> ´ÙÀ½ ¹ÙÀÌÆ® ÀÖÀ½ / »óÀ§ ºñÆ® 0 -> ¸¶Áö¸· ¹ÙÀÌÆ®ÀÓ
+//	µ¥ÀÌÅÍ¸¦ 7ºñÆ® ´ÜÀ§·Î ³¡¾î¼­ ÀúÀåÇÔ
 uint32_t CMidi::ReadVLQ(FILE* fp)
 {
 	uint32_t value = 0;
@@ -155,102 +131,69 @@ MidiTrack CMidi::ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumbe
 {
 	MidiTrack track;
 	track.trackNumber = trackNumber;
-	track.length = trackLength;
-
-	printf("parsing track : %d\n", trackNumber);
 
 	uint32_t time = 0;
-	uint32_t accuTime = 0;
+	unsigned long long absTime = 0;
 	uint8_t running = None;
 	uint8_t runningChannel = 0;
 	while (trackLength > 0)
 	{
-		//printf("remain length : %d\n", trackLength);
 		bool meta = false;
 		MidiEvent mEvent;
 		uint32_t delta = ReadVLQ(fp);
 		trackLength -= GetLastVLQlen();
 		time = delta;
-		accuTime += time;
-		uint8_t bt = fgetc(fp);	//	ì—¬ê¸°ì„œ running status ì²´í¬ë¥¼ í•´ì•¼í•¨
+		absTime += time;
+		uint8_t bt = fgetc(fp);	//	¿©±â¼­ running status Ã¼Å©¸¦ ÇØ¾ßÇÔ
 		trackLength--;
-		uint8_t status;
-		uint8_t channel;
 		uint8_t data1 = 0;
 		uint8_t data2 = 0;
 		if (bt < eStatus::NoteOff)
-		{	//	dataë¥¼ ë°›ê³ ìˆìœ¼ë¯€ë¡œ running statusì„
+		{	//	data¸¦ ¹Ş°íÀÖÀ¸¹Ç·Î running statusÀÓ
 			switch (running)
 			{
-			case ControlChange:
 			case NoteOff:
 			case NoteOn:
 			case PolyphonicKeyPressure:
+			case ControlChange:
 			case PitchBend:
-				//	ë°ì´í„° ë‘ê°œ
+				//	µ¥ÀÌÅÍ µÎ°³
 				data1 = bt;
 				data2 = fgetc(fp);
 				trackLength--;
 				break;
 			case ProgramChange:
 			case ChannelPressure:
-				//	ë°ì´í„° í•œê°œ
+				//	µ¥ÀÌÅÍ ÇÑ°³
 				data1 = bt;
 				break;
 			default:
-				//	running statusì—ì„  SysExë‚˜ MetaEventê°€ ë‚˜ì˜¤ì§€ ì•ŠìŒ.
+				//	running status¿¡¼± SysEx³ª MetaEvent°¡ ³ª¿ÀÁö ¾ÊÀ½.
 				break;
-			}
-			status = running;
-			channel = runningChannel;
-			if (status == NoteOn)
-			{
-				if (data2 == 0)
-				{
-					status = NoteOff;
-				}
 			}
 		}
 		else
 		{
-			status = bt & 0xF0;
-			channel = bt & 0x0F;
+			uint8_t status = bt & 0xF0;
+			uint8_t channel = bt & 0x0F;
 
 			switch (status)
 			{
-			case ControlChange:
-				data1 = fgetc(fp);
-				data2 = fgetc(fp);
-				if (data1 == 0 || data1 == 32)
-				{	//	control change bank select MSB	/	LSB
-					data1 = data2;
-					data2 = 0;
-					mEvent.longData = 1;
-				}
-				trackLength -= 2;
-				break;
 			case NoteOff:
 			case NoteOn:
-			case PolyphonicKeyPressure:		
+			case PolyphonicKeyPressure:
+			case ControlChange:
 			case PitchBend:
-				//	ë°ì´í„° ë‘ê°œ
+				//	µ¥ÀÌÅÍ µÎ°³
 				data1 = fgetc(fp);
 				data2 = fgetc(fp);
 				running = status;
-				if (status == NoteOn)
-				{
-					if (data2 == 0)
-					{
-						status = NoteOff;
-					}
-				}
 				runningChannel = channel;
-				
 				trackLength -= 2;
 				break;
 			case ProgramChange:
 			case ChannelPressure:
-				//	ë°ì´í„° í•œê°œ
+				//	µ¥ÀÌÅÍ ÇÑ°³
 				data1 = fgetc(fp);
 				running = status;
 				runningChannel = channel;
@@ -260,26 +203,14 @@ MidiTrack CMidi::ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumbe
 				//	Sysex or Meta event
 				meta = true;
 				if (bt == SystemExclusive)
-				{	//	ì²˜ë¦¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤
-					//printf("skip sysex...\n");
-					printf("read sysex...\n");
+				{	//	Ã³¸®ÇÏÁö ¾Ê½À´Ï´Ù
 					uint32_t length = ReadVLQ(fp);
 					trackLength -= GetLastVLQlen();
 					for (uint32_t i = 0; i < length; i++)
 					{
-						uint8_t c = fgetc(fp);
-						if (i < 20)
-						{
-							mEvent.sysex[i] = c;
-						}	
+						fgetc(fp);
 						trackLength--;
 					}
-					mEvent.accuTime = (double)accuTime;
-					mEvent.time = delta;
-					mEvent.eEvent = SystemExclusive;
-					mEvent.longData = min(length,20);
-					track.events.push_back(mEvent);
-					//printf("%u Byte skiped\n", length);
 				}
 				else if (bt == MetaEvent)
 				{
@@ -287,176 +218,30 @@ MidiTrack CMidi::ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumbe
 					trackLength--;
 					uint32_t length = ReadVLQ(fp);
 					trackLength -= GetLastVLQlen();
-					
-					switch (type)
+					if (type == 0x51)
 					{
-					case 0x01:
-					{	//	text
-						char text[101];
-						for (uint32_t i = 0; i < length; i++)
-						{
-							if (i > 99)
-							{
-								fgetc(fp);
-								trackLength--;
-								continue;
-							}
-							text[i] = fgetc(fp);
-							trackLength--;
-						}
-						if (length > 100)	length = 100;
-						text[length] = '\0';
-						printf("MetaEvent Text : %s\n", text);
-					}
-						break;
-					case 0x03:
-					{
-						//	Track name
-						char text[101];
-						for (uint32_t i = 0; i < length; i++)
-						{
-							if (i > 99)
-							{
-								fgetc(fp);
-								trackLength--;
-								continue;
-							}
-							text[i] = fgetc(fp);
-							trackLength--;
-						}
-						if (length > 100)	length = 100;
-						text[length] = '\0';
-						printf("track name : %s\n", text);
-					}
-						break;
-					case 0x02:
-					{
-						//	Copyright
-						char text[101];
-						for (uint32_t i = 0; i < length; i++)
-						{
-							if (i > 99)
-							{
-								fgetc(fp);
-								trackLength--;
-								continue;
-							}
-							text[i] = fgetc(fp);
-							trackLength--;
-						}
-						if (length > 100)	length = 100;
-						text[length] = '\0';
-						printf("Copyright : %s\n", text);
-					}
-					break;
-					case 0x04:
-					{
-						//	Instrument name
-						char text[101];
-						for (uint32_t i = 0; i < length; i++)
-						{
-							if (i > 99)
-							{
-								fgetc(fp);
-								trackLength--;
-								continue;
-							}
-							text[i] = fgetc(fp);
-							trackLength--;
-						}
-						if (length > 100)	length = 100;
-						text[length] = '\0';
-						printf("Instrument name : %s\n", text);
-					}
-					break;
-					case 0x58:
-					{
-						//	Time Signature
-						//	nn dd cc bb
-						uint8_t nn = fgetc(fp);
-						uint8_t dd = fgetc(fp);
-						uint8_t cc = fgetc(fp);
-						uint8_t bb = fgetc(fp);
-						trackLength -= 4;
-						printf("%d / %d, metronome click : %d, 32nd : %d\n", nn, (int)pow(2, dd), cc, bb);
-					}
-						break;
-					case 0x59:
-					{
-						//	Key Signature
-						//	sf(-7 ~ 7) mi ( 0 or 1 )
-						//	ì¡°í‘œëŠ” ìˆ«ì ê°’ì¸ sf Keyë¡œ ì§€ì •ë˜ë©°,
-						//	ì´ ê°’ì€ Cì¥ì¡°ì¼ ê²½ìš° 0, C ìœ„ì˜ ê° ìƒµ(â™¯)ë§ˆë‹¤ ì–‘ìˆ˜ ê°’,	
-						//	C ì•„ë˜ì˜ ê° í”Œë«(â™­)ë§ˆë‹¤ ìŒìˆ˜ ê°’(7~7)ì„ ê°–ìŠµë‹ˆë‹¤. 
-						//	Major/Minor mi í•„ë“œëŠ” ìˆ«ì ê°’ìœ¼ë¡œ, ì¥ì¡°ì¼ ê²½ìš° 0, ë‹¨ì¡°ì¼ ê²½ìš° 1ì…ë‹ˆë‹¤.
-						uint8_t sf = fgetc(fp);
-						uint8_t mi = fgetc(fp);
-						trackLength -= 2;
-						printf("Key Signature\n");
-					}
-						break;
-					case 0x51:
-					{
-						// tempo ì²˜ë¦¬
+						// tempo Ã³¸®
 						uint32_t tempo = 0;
 						tempo |= fgetc(fp) << 16;
 						tempo |= fgetc(fp) << 8;
 						tempo |= fgetc(fp);
 						trackLength -= 3;
-						printf("Meta Event Tempo: %u, delta : %u, accuTime : %u\n", tempo, delta, accuTime);
-						mEvent.accuTime = (double)accuTime;
-						mEvent.time = delta;
-						mEvent.eEvent = MetaEvent;
-						mEvent.longData = tempo;
-						track.events.push_back(mEvent);
+						track.tempo = tempo;
+						tickToMs = ((double)tempo / (double)1000.0) / (double)m_sMidiHeader.division;
 					}
-						break;
-					case 0x2F:
+					else if (type == 0x2F)
 					{
-						printf("End of track\n");
 						// End of Track
-						if (trackLength > 0)
-						{
-							assert(0);
-						}
 						return track;
 					}
-					break;
-					case 0x54:
-					{	//	SMPTE offset
-						//	hr mn se fr ff
-						uint8_t hr = fgetc(fp);
-						uint8_t mn = fgetc(fp);
-						uint8_t se = fgetc(fp);
-						uint8_t fr = fgetc(fp);
-						uint8_t ff = fgetc(fp);
-						trackLength -= 5;
-						int rate = (hr >> 5) & 0x03;
-						int hh = hr & 0x1F;
-						int fps;
-						switch (rate)
-						{
-						case 0:	fps = 24;	break;
-						case 1:	fps = 25;	break;
-						case 2:	fps = 30;	break;	//29.97
-						case 3:	fps = 30;	break;
-						}
-
-						double totalSec = hh * 3600 + mn * 60 + se + (double)fr / fps + (double)ff / (fps * 100);
-						globalOffset = totalSec * 1000.0;
-					}
-					break;
-					default:
+					else
 					{
-						printf("Meta Event skip : %d\n", type);
-						// ë‚˜ë¨¸ì§€ëŠ” skip
+						// ³ª¸ÓÁö´Â skip
 						for (uint32_t i = 0; i < length; i++)
 						{
 							fgetc(fp);
 							trackLength--;
 						}
-					}
-					break;
 					}
 				}
 			}
@@ -464,10 +249,10 @@ MidiTrack CMidi::ParseEvents(FILE* fp, uint32_t trackLength, uint16_t trackNumbe
 
 		if (meta)	continue;
 
-		mEvent.accuTime = (double)accuTime;
+		mEvent.absTime = (double)absTime * tickToMs;
 		mEvent.time = delta;
-		mEvent.type = status | channel;
-		mEvent.eEvent = (eStatus)status;
+		mEvent.type = running | runningChannel;
+		mEvent.eEvent = (eStatus)running;
 		mEvent.channel = runningChannel;
 		mEvent.data1 = data1;
 		mEvent.data2 = data2;
