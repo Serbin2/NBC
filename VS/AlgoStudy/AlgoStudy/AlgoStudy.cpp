@@ -11,22 +11,49 @@
 #include <math.h>
 #include <vector>
 
-int solution(int n) {
-	int answer = 0;
-	if (n < 2)
+
+
+long long solution(long long n) 
+{
+	long long answer = 0;
+	int num[11] = { 0, };
+	int len = 0;
+
+	while (n > 0)
 	{
-		return n;
-	}
-	for (int i = 2; i < n; i++)
-	{
-		if (n % i == 0)
+		int a = n % 10;
+		n /= 10;
+		int tmp = 0;
+		for (int i = 0; i < 11; i++)
 		{
-			answer += i;
+			if (a <= num[i])
+			{
+
+			}
+			else
+			{
+				tmp = num[i];
+				num[i] = a;
+				a = tmp;
+			}
 		}
+		len++;
 	}
-	answer += 1 + n;
+
+	for (int i = 0; i < len; i++)
+	{
+		answer += num[i] * pow(10 ,len - i - 1);
+	}
+
 
 	return answer;
+}
+
+
+int main()
+{
+	long long n = 761245;
+	solution(n);
 }
 
 
