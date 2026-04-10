@@ -11,20 +11,21 @@
 //#define BATCH08
 //#define BATCH09
 //#define BATCH10
-#define BATCH11
+//#define BATCH11
 
 using namespace std;
 
 #ifdef BATCH01
+//	배열의 합 구하기
 #include <iostream>
 #include <vector>
 long long sum(const vector<int>& v)
 {
 	long long retval = 0;
-
-	for (auto& i : v)
+	
+	for (int i = 0; i < v.size(); i++)
 	{
-		retval += i;
+		retval = retval + v[i];
 	}
 
 	return retval;
@@ -63,6 +64,7 @@ int main() {
 }
 #endif
 
+//#define BATCH03
 #ifdef BATCH03
 //`class Rect`를 구현하시오.
 //
@@ -110,6 +112,7 @@ int main() {
 }
 #endif
 
+//#define BATCH04
 #ifdef BATCH04
 #include <iostream>
 #include <string>
@@ -174,6 +177,7 @@ int main() {
 }
 #endif
 
+//#define BATCH05
 #ifdef BATCH05
 ///class Animal { virtual void speak(); }에서 파생 클래스 Dog, Cat를 만들고 각각 "Woof", "Meow"를 출력하도록 오버라이드하시오.Animal * 배열로 다형성 출력
 #include <iostream>
@@ -219,6 +223,7 @@ int main() {
 }
 #endif
 
+//#define BATCH06
 #ifdef BATCH06
 #include <iostream>
 #include <string>
@@ -239,6 +244,7 @@ int main() {
 }
 #endif
 
+//#define BATCH07
 #ifdef BATCH07
 #include <iostream>
 using namespace std;
@@ -276,6 +282,7 @@ int main() {
 }
 #endif
 
+//#define BATCH08
 #ifdef BATCH08
 #include <iostream>
 #include <unordered_map>
@@ -308,6 +315,7 @@ int main() {
 }
 #endif
 
+//#define BATCH09
 #ifdef BATCH09
 #include <iostream>
 #include <string>
@@ -352,6 +360,7 @@ int main() {
 }
 #endif
 
+#define BATCH10
 #ifdef BATCH10
 #include <iostream>
 #include <string>

@@ -7,8 +7,8 @@
 
 #define MAX_LOADSTRING 100
 
-//string path = "./goit.mid";
-string path = "./take5.mid";
+string path = "./goit.mid";
+//string path = "./take5.mid";
 
 
 int main()
