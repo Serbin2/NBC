@@ -1,38 +1,691 @@
 ﻿// AlgoStudy.cpp : 이 파일에는 'main' 함수가 포함됩니다. 거기서 프로그램 실행이 시작되고 종료됩니다.
 //
 
+//#include <iostream>
+//#include "Picnic.h"
+//#include "BoardCover.h"
+//
+//#include <stdio.h>
+//#include <stdbool.h>
+//#include <stdlib.h>
+//#include <math.h>
+//#include <vector>
+//#include <bitset>
+
 #include <iostream>
-#include "Picnic.h"
-#include "BoardCover.h"
-
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdlib.h>
-#include <math.h>
+#include <algorithm>
 #include <vector>
+#include <string>
+using namespace std;
+
+class A
+{
+	int a;
+	int b;
+};
+
+struct B : A
+{
+	//B() { a = 1; };
+	int c;
+	int d;
+};
+
+class C : B
+{
+	C() { c = 2; };
+	int e;
+	int v;
+};
 
 
-// 파라미터로 주어지는 문자열은 const로 주어집니다. 변경하려면 문자열을 복사해서 사용하세요.
-char* solution(const char* phone_number) {
-	int len = strlen(phone_number);
-	
-	// return 값은 malloc 등 동적 할당을 사용해주세요. 할당 길이는 상황에 맞게 변경해주세요.
-	char* answer = (char*)malloc(len);
+int main() {
 
-	for (int i = 0; i < len; i++)
+	vector<int> line(3);
+	cin >> line[0] >> line[1] >> line[2];
+	sort(line.begin(), line.end(), greater<>());
+
+	string str;
+	if (line[0] >= line[1] + line[2])
 	{
-		if (i < len - 4)
-		{
-			answer[i] = '*';
-		}
-		else
-		{
-			answer[i] = phone_number[i];
-		}
+		str = "Invalid";
 	}
-	return answer;
+	else if (line[0] == line[1] && line[1] == line[2])
+	{
+		str = "Equilateral";
+	}
+	else if (line[0] == line[1] || line[1] == line[2] || line[0] == line[2])
+	{
+		str = "Isosceles";
+	}
+	else
+	{
+		str = "Scalene";
+	}
+	cout << str;
+
+
+	return 0;
 }
 
+
+#pragma once
+// =====================================================
+// Week06: 어떤 도구를 꺼낼 것인가 -- 자료구조 선택의 기술
+// =====================================================
+// 이번 회차의 핵심: 같은 문제를 여러 자료구조로 풀어보며 선택 감각 기르기
+// - Level 1 자료구조 총정리 -- 한눈에 비교
+// - 시나리오 1: 출석부 -- 검색 빈도가 도구 선택을 좌우한다
+// - 시나리오 2: Undo -- 성능이 같으면 의도를 더 잘 표현하는 도구
+// - 시나리오 3: 매출 집계 -- 복합 요구사항의 트레이드오프
+// - 도구 선택의 세 가지 기준: 성능, 의도 표현, 요구사항 매칭
+// =====================================================
+
+//#include <iostream>
+//#include <string>
+//#include <vector>
+//#include <stack>
+//#include <queue>
+//#include <map>
+//#include <set>
+//#include <unordered_map>
+//#include <unordered_set>
+//#include <algorithm>
+//using namespace std;
+
+// Week06: 어떤 도구를 꺼낼 것인가 -- 자료구조 선택의 기술
+//#define RUN_WEEK06_EXAMPLE01    // Level 1 도구함 총정리 (자료구조별 비교 데모)
+//#define RUN_WEEK06_EXAMPLE02    // 출석부 관리 (vector vs set vs unordered_set)
+//#define RUN_WEEK06_EXAMPLE03    // Undo 기능 (vector vs stack)
+//#define RUN_WEEK06_EXAMPLE04    // 편의점 매출 집계 (vector vs map vs unordered_map)
+//#define RUN_WEEK06_EXAMPLE05    // 도구 선택 가이드 + Level 2 맛보기
+
+
+
+// =====================================================
+// 예제 1: "Level 1 도구함 총정리" -- 자료구조별 특성 비교 데모
+// =====================================================
+#ifdef RUN_WEEK06_EXAMPLE01
+int main() {
+	cout << "===== [예제 1] Level 1 도구함 총정리 =====" << endl;
+	cout << endl;
+
+	// 같은 데이터: 3, 1, 4, 1, 5
+	// 같은 데이터를 넣어도 자료구조마다 꺼내는 규칙이 다르다!
+	cout << "같은 데이터 {3, 1, 4, 1, 5}를 각 자료구조에 넣어봅니다." << endl;
+	cout << endl;
+
+	// ── 1) vector: 인덱스로 자유롭게 접근 ──
+	cout << "[1] vector -- 순서 있는 연속 배열" << endl;
+
+	vector<int> v = { 3, 1, 4, 1, 5 };
+
+	// vector: 인덱스로 자유롭게 접근 -- O(1)
+	cout << "  넣은 순서 그대로 저장: ";
+	for (int i = 0; i < (int)v.size(); i++) {
+		cout << "v[" << i << "]=" << v[i] << " ";
+	}
+	cout << endl;
+	cout << "  → 인덱스로 아무 위치나 접근 가능. v[2] = " << v[2] << endl;
+	cout << "  → 접근 O(1), 검색 O(n), 끝 삽입/삭제 O(1)" << endl;
+	cout << endl;
+
+	// ── 2) stack: 마지막에 넣은 것만 꺼낼 수 있다 ──
+	cout << "[2] stack -- LIFO (후입선출)" << endl;
+
+	stack<int> st;
+	for (int n : {3, 1, 4, 1, 5}) st.push(n);
+
+	// stack: 마지막에 넣은 것만 꺼낼 수 있다 -- LIFO
+	cout << "  꺼내는 순서 (top → pop 반복): ";
+	while (!st.empty()) {
+		cout << st.top() << " ";   // 마지막에 넣은 것부터 나온다!
+		st.pop();
+	}
+	cout << endl;
+	cout << "  → 5, 1, 4, 1, 3 순서! 넣은 순서의 역순" << endl;
+	cout << "  → push/pop O(1). top만 접근 가능" << endl;
+	cout << endl;
+
+	// ── 3) queue: 먼저 넣은 것부터 꺼낸다 ──
+	cout << "[3] queue -- FIFO (선입선출)" << endl;
+
+	queue<int> q;
+	for (int n : {3, 1, 4, 1, 5}) q.push(n);
+
+	// queue: 먼저 넣은 것부터 꺼낸다 -- FIFO
+	cout << "  꺼내는 순서 (front → pop 반복): ";
+	while (!q.empty()) {
+		cout << q.front() << " ";  // 먼저 넣은 것부터 나온다!
+		q.pop();
+	}
+	cout << endl;
+	cout << "  → 3, 1, 4, 1, 5 순서! 넣은 순서 그대로" << endl;
+	cout << "  → push/pop O(1). front만 접근 가능" << endl;
+	cout << endl;
+
+	// ── 4) set: 중복 제거 + 자동 정렬 ──
+	cout << "[4] set -- 중복 제거 + 자동 정렬" << endl;
+
+	set<int> s = { 3, 1, 4, 1, 5 };
+
+	// set: 중복 제거 + 자동 정렬
+	cout << "  저장된 내용: ";
+	for (int n : s) cout << n << " ";
+	cout << endl;
+	cout << "  → {3, 1, 4, 1, 5} 중 중복(1)이 제거되고, 정렬됨!" << endl;
+	cout << "  → size: 5개 넣었지만 " << s.size() << "개만 저장" << endl;
+	cout << "  → 검색/삽입/삭제 O(log n)" << endl;
+	cout << endl;
+
+	// ── 5) map: key로 value에 접근 ──
+	cout << "[5] map -- key로 value에 접근" << endl;
+
+	// map: key로 value에 접근
+	map<string, int> m;
+	m["세번째"] = 3;
+	m["첫번째"] = 1;
+	m["네번째"] = 4;
+	m["다섯번째"] = 5;
+
+	cout << "  key로 접근: m[\"세번째\"] = " << m["세번째"] << endl;
+	cout << "  순회 (key 정렬순): ";
+	for (auto& p : m) {
+		cout << p.first << "=" << p.second << " ";
+	}
+	cout << endl;
+	cout << "  → key 기준 정렬. 검색/삽입/삭제 O(log n)" << endl;
+	cout << endl;
+
+	// ── 정리 ──
+	cout << "========================================" << endl;
+	cout << "[정리] 같은 데이터를 담아도, 꺼내는 규칙이 다르다!" << endl;
+	cout << "  vector → 인덱스로 자유롭게" << endl;
+	cout << "  stack  → 마지막부터 (LIFO)" << endl;
+	cout << "  queue  → 처음부터 (FIFO)" << endl;
+	cout << "  set    → 중복 제거 + 정렬" << endl;
+	cout << "  map    → key라는 이름표로 접근" << endl;
+
+	return 0;
+}
+#endif
+
+// =====================================================
+// 예제 2: "출석부 관리" -- vector vs set vs unordered_set
+// =====================================================
+#ifdef RUN_WEEK06_EXAMPLE02
+int main() {
+	cout << "===== [예제 2] 출석부 관리 -- vector vs set vs unordered_set =====" << endl;
+	cout << endl;
+
+	// 출석한 학생 명단 (5명)
+	vector<string> attendList = { "김철수", "박영희", "이민수", "정하나", "최준호" };
+
+	// 확인할 학생
+	string target = "정하나";
+
+	// ── 1) vector 방식 ──
+	cout << "[1] vector<string> -- 순회하며 비교" << endl;
+	{
+		vector<string> attended;
+		for (auto& name : attendList) {
+			attended.push_back(name);
+		}
+
+		// vector: 순회하며 비교 -- O(n)
+		// 처음부터 하나씩 확인해야 한다
+		bool found = false;
+		int compareCount = 0;
+		for (auto& name : attended) {
+			compareCount++;
+			if (name == target) {
+				found = true;
+				break;
+			}
+		}
+		cout << "  \"" << target << "\" 출석 여부: " << (found ? "O" : "X") << endl;
+		cout << "  비교 횟수: " << compareCount << "번 (최악 " << attended.size() << "번)" << endl;
+		cout << "  시간 복잡도: O(n)" << endl;
+
+		// 중복 방지? 직접 구현해야 한다!
+		cout << "  중복 방지: 직접 구현 필요" << endl;
+		cout << "  정렬: 없음" << endl;
+	}
+	cout << endl;
+
+	// ── 2) set 방식 ──
+	cout << "[2] set<string> -- 트리 탐색" << endl;
+	{
+		set<string> attended;
+		for (auto& name : attendList) {
+			attended.insert(name);
+		}
+
+		// set: 트리 탐색 -- O(log n)
+		// count()로 존재 여부를 빠르게 확인
+		bool found = attended.count(target) > 0;
+		cout << "  \"" << target << "\" 출석 여부: " << (found ? "O" : "X") << endl;
+		cout << "  시간 복잡도: O(log n) -- 5명 중 ~3번 비교면 충분" << endl;
+
+		// set은 중복 자동 방지 + 정렬
+		cout << "  중복 방지: 자동!" << endl;
+		cout << "  정렬: 자동! → ";
+		for (auto& name : attended) cout << name << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	// ── 3) unordered_set 방식 ──
+	cout << "[3] unordered_set<string> -- 해시 접근" << endl;
+	{
+		unordered_set<string> attended;
+		for (auto& name : attendList) {
+			attended.insert(name);
+		}
+
+		// unordered_set: 해시 접근 -- O(1) 평균
+		// 해시 함수로 바로 위치를 계산해서 즉시 확인
+		bool found = attended.count(target) > 0;
+		cout << "  \"" << target << "\" 출석 여부: " << (found ? "O" : "X") << endl;
+		cout << "  시간 복잡도: O(1) 평균 -- 데이터가 얼마나 많든 즉시!" << endl;
+
+		cout << "  중복 방지: 자동!" << endl;
+		cout << "  정렬: 없음 (순서 보장 안 됨) → ";
+		for (auto& name : attended) cout << name << " ";
+		cout << endl;
+	}
+	cout << endl;
+
+	// ── 비교 정리 ──
+	cout << "========================================" << endl;
+	cout << "[비교 정리]" << endl;
+	cout << "  ┌────────────────┬──────────┬──────────┬───────────────┐" << endl;
+	cout << "  │                │  vector  │   set    │ unordered_set │" << endl;
+	cout << "  ├────────────────┼──────────┼──────────┼───────────────┤" << endl;
+	cout << "  │ 검색 속도      │  O(n)    │ O(log n) │  O(1) 평균    │" << endl;
+	cout << "  │ 중복 방지      │  직접    │  자동    │  자동         │" << endl;
+	cout << "  │ 정렬           │  없음    │  자동    │  없음         │" << endl;
+	cout << "  └────────────────┴──────────┴──────────┴───────────────┘" << endl;
+	cout << endl;
+	// → 검색 빈도가 높을수록 set 계열이 유리!
+	cout << "→ 검색 빈도가 높을수록 set 계열이 유리!" << endl;
+	cout << "→ 정렬 필요 없으면 unordered_set이 최적!" << endl;
+
+	return 0;
+}
+#endif
+
+// =====================================================
+// 예제 3: "Undo 기능" -- vector vs stack
+// =====================================================
+#ifdef RUN_WEEK06_EXAMPLE03
+int main() {
+	cout << "===== [예제 3] Undo 기능 -- vector vs stack =====" << endl;
+	cout << endl;
+
+	// ── 1) vector 버전 ──
+	cout << "[1] vector<char> -- push_back / pop_back" << endl;
+	{
+		vector<char> editor;
+
+		// 문자 입력
+		editor.push_back('H');
+		editor.push_back('e');
+		editor.push_back('l');
+		editor.push_back('l');
+		editor.push_back('o');
+
+		cout << "  입력 후: ";
+		for (char c : editor) cout << c;
+		cout << endl;
+
+		// Undo: pop_back으로 마지막 문자 제거 -- O(1)
+		editor.pop_back();
+		cout << "  Undo 1회: ";
+		for (char c : editor) cout << c;
+		cout << endl;
+
+		editor.pop_back();
+		cout << "  Undo 2회: ";
+		for (char c : editor) cout << c;
+		cout << endl;
+		cout << "  → push_back/pop_back 모두 O(1). 잘 동작한다!" << endl;
+		cout << endl;
+
+		// ⚠️ 그런데 vector는 중간 접근이 가능하다 (위험!)
+		// 둘 다 O(1) -- 성능은 동일
+		// 그런데 vector는 중간 접근이 가능하다 (의도치 않은 수정 위험!)
+		cout << "  ⚠️ vector의 위험: 중간 접근이 가능하다!" << endl;
+		cout << "  현재: ";
+		for (char c : editor) cout << c;
+		cout << endl;
+
+		// 실수로 중간 요소를 바꿔버릴 수 있다!
+		editor[0] = 'X';   // Undo 로직과 무관한 수정이 가능!
+		cout << "  editor[0] = 'X' 실행 후: ";
+		for (char c : editor) cout << c;
+		cout << endl;
+		cout << "  → Undo와 무관하게 중간을 건드릴 수 있다. 버그의 원인!" << endl;
+	}
+	cout << endl;
+
+	// ── 2) stack 버전 ──
+	cout << "[2] stack<char> -- push / pop" << endl;
+	{
+		stack<char> editor;
+
+		// 문자 입력
+		editor.push('H');
+		editor.push('e');
+		editor.push('l');
+		editor.push('l');
+		editor.push('o');
+
+		// stack은 순회할 수 없으므로 현재 상태를 보여주기 위해 복사
+		auto showStack = [](stack<char> s) {
+			string result;
+			while (!s.empty()) {
+				result = s.top() + result;
+				s.pop();
+			}
+			return result;
+			};
+
+		cout << "  입력 후: " << showStack(editor) << endl;
+
+		// Undo: pop으로 마지막 문자 제거 -- O(1)
+		editor.pop();
+		cout << "  Undo 1회: " << showStack(editor) << endl;
+
+		editor.pop();
+		cout << "  Undo 2회: " << showStack(editor) << endl;
+		cout << "  → push/pop 모두 O(1). 역시 잘 동작한다!" << endl;
+		cout << endl;
+
+		// stack은 top만 접근 가능 -- 구조가 실수를 막아준다
+		cout << "  ✅ stack의 장점: top만 접근 가능!" << endl;
+		cout << "  editor.top() = '" << editor.top() << "' (마지막 문자만 볼 수 있다)" << endl;
+		cout << "  editor[0] = 'X'? → 컴파일 에러! stack에는 [] 연산이 없다!" << endl;
+		cout << "  → 구조가 실수를 막아준다. 의도치 않은 중간 수정이 불가능!" << endl;
+	}
+	cout << endl;
+
+	// ── 비교 정리 ──
+	cout << "========================================" << endl;
+	cout << "[비교 정리]" << endl;
+	cout << "  ┌────────────────┬──────────────┬──────────────┐" << endl;
+	cout << "  │                │   vector     │    stack     │" << endl;
+	cout << "  ├────────────────┼──────────────┼──────────────┤" << endl;
+	cout << "  │ 추가/제거 성능 │   O(1)       │    O(1)      │" << endl;
+	cout << "  │ 중간 접근      │   가능 (위험)│  불가 (안전) │" << endl;
+	cout << "  │ 의도 표현      │   불명확     │ LIFO 명확    │" << endl;
+	cout << "  └────────────────┴──────────────┴──────────────┘" << endl;
+	cout << endl;
+	// 코드는 미래의 나에게 보내는 편지. 의도를 담자
+	cout << "→ 성능이 같다면, 의도를 더 잘 표현하는 도구를 고르자!" << endl;
+	cout << "→ 코드는 미래의 나에게 보내는 편지. 의도를 담자." << endl;
+
+	return 0;
+}
+#endif
+
+// =====================================================
+// 예제 4: "편의점 매출 집계" -- vector vs map vs unordered_map
+// =====================================================
+#ifdef RUN_WEEK06_EXAMPLE04
+int main() {
+	cout << "===== [예제 4] 편의점 매출 집계 -- vector vs map vs unordered_map =====" << endl;
+	cout << endl;
+
+	// 판매 기록 데이터
+	vector<string> salesLog = {
+		"콜라", "삼각김밥", "콜라", "커피", "삼각김밥",
+		"콜라", "커피", "아이스크림", "삼각김밥", "콜라",
+		"아이스크림", "커피", "콜라", "삼각김밥", "커피"
+	};
+
+	cout << "판매 기록: ";
+	for (auto& item : salesLog) cout << item << " ";
+	cout << endl;
+	cout << "(총 " << salesLog.size() << "건)" << endl;
+	cout << endl;
+
+	// 요구사항:
+	// (A) 각 상품이 몇 개 팔렸는지 집계
+	// (B) 가장 많이 팔린 상품 찾기
+	// (C) 전체 상품 목록을 이름순으로 출력
+
+	// ── 1) vector<pair<string,int>> 방식 ──
+	cout << "[1] vector<pair<string,int>> -- 직접 구현" << endl;
+	{
+		// vector: 직접 구현 -- 코드가 길지만 동작은 한다
+		vector<pair<string, int>> salesVec;
+
+		// (A) 집계: 매 상품마다 이미 있는지 순회 검색해야 한다!
+		for (auto& item : salesLog) {
+			bool found = false;
+			// 이미 있는 상품인지 처음부터 순회하며 확인 -- O(n)
+			for (auto& p : salesVec) {
+				if (p.first == item) {
+					p.second++;    // 있으면 +1
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				salesVec.push_back({ item, 1 });  // 없으면 새로 추가
+			}
+		}
+
+		cout << "  (A) 상품별 집계:" << endl;
+		for (auto& p : salesVec) {
+			cout << "      " << p.first << ": " << p.second << "개" << endl;
+		}
+
+		// (B) 최다 판매 상품
+		string bestItem;
+		int bestCount = 0;
+		for (auto& p : salesVec) {
+			if (p.second > bestCount) {
+				bestItem = p.first;
+				bestCount = p.second;
+			}
+		}
+		cout << "  (B) 최다 판매: " << bestItem << " (" << bestCount << "개)" << endl;
+
+		// (C) 이름순 출력 → 직접 정렬 필요!
+		sort(salesVec.begin(), salesVec.end());
+		cout << "  (C) 이름순: ";
+		for (auto& p : salesVec) cout << p.first << " ";
+		cout << endl;
+		cout << "  → 코드가 길고, 검색/정렬을 직접 구현해야 한다" << endl;
+	}
+	cout << endl;
+
+	// ── 2) map<string,int> 방식 ──
+	cout << "[2] map<string,int> -- 카운팅 + 정렬 자동" << endl;
+	{
+		// map: 카운팅 + 정렬 -- 균형 잡힌 선택
+		map<string, int> salesMap;
+
+		// (A) 집계: m[key]++ 한 줄! (5회차 카운팅 패턴)
+		for (auto& item : salesLog) {
+			salesMap[item]++;   // 없으면 0으로 자동 생성 → +1
+		}
+
+		cout << "  (A) 상품별 집계 (이름순 자동 정렬!):" << endl;
+		// (C) 이름순 출력: map은 key 기준 자동 정렬!
+		for (auto& p : salesMap) {
+			cout << "      " << p.first << ": " << p.second << "개" << endl;
+		}
+
+		// (B) 최다 판매 상품
+		string bestItem;
+		int bestCount = 0;
+		for (auto& p : salesMap) {
+			if (p.second > bestCount) {
+				bestItem = p.first;
+				bestCount = p.second;
+			}
+		}
+		cout << "  (B) 최다 판매: " << bestItem << " (" << bestCount << "개)" << endl;
+		cout << "  (C) 이름순 출력: 위 결과가 이미 이름순!" << endl;
+		cout << "  → m[key]++ 한 줄로 집계 + 순회 시 자동 정렬. 깔끔!" << endl;
+	}
+	cout << endl;
+
+	// ── 3) unordered_map<string,int> 방식 ──
+	cout << "[3] unordered_map<string,int> -- 속도 최우선" << endl;
+	{
+		// unordered_map: 속도 최우선 -- 정렬이 필요하면 별도 처리
+		unordered_map<string, int> salesUMap;
+
+		// (A) 집계: 동일한 패턴, 하지만 O(1) 평균!
+		for (auto& item : salesLog) {
+			salesUMap[item]++;   // 해시 기반이라 삽입/접근 O(1) 평균
+		}
+
+		cout << "  (A) 상품별 집계 (정렬 안 됨!):" << endl;
+		for (auto& p : salesUMap) {
+			cout << "      " << p.first << ": " << p.second << "개" << endl;
+		}
+
+		// (B) 최다 판매 상품
+		string bestItem;
+		int bestCount = 0;
+		for (auto& p : salesUMap) {
+			if (p.second > bestCount) {
+				bestItem = p.first;
+				bestCount = p.second;
+			}
+		}
+		cout << "  (B) 최다 판매: " << bestItem << " (" << bestCount << "개)" << endl;
+		cout << "  (C) 이름순 출력: 별도 정렬이 필요! (unordered는 순서 보장 X)" << endl;
+		cout << "  → 삽입/접근 O(1) 평균으로 가장 빠르지만, 정렬 불가" << endl;
+	}
+	cout << endl;
+
+	// ── 비교 정리 ──
+	cout << "========================================" << endl;
+	cout << "[비교 정리]" << endl;
+	cout << "  ┌────────────────┬────────────┬────────────┬───────────────┐" << endl;
+	cout << "  │                │  vector    │   map      │ unordered_map │" << endl;
+	cout << "  ├────────────────┼────────────┼────────────┼───────────────┤" << endl;
+	cout << "  │ 집계 코드      │  △ 길다   │ ◎ 한 줄   │  ◎ 한 줄     │" << endl;
+	cout << "  │ 집계 성능      │  O(n) 검색 │ O(log n)   │  O(1) 평균    │" << endl;
+	cout << "  │ 이름순 출력    │  △ 직접   │ ◎ 자동    │  △ 별도 정렬  │" << endl;
+	cout << "  │ 종합           │  △        │ ◎         │  ○            │" << endl;
+	cout << "  └────────────────┴────────────┴────────────┴───────────────┘" << endl;
+	cout << endl;
+	cout << "→ 세 요구사항을 모두 만족하는 균형 잡힌 선택: map" << endl;
+	cout << "→ 정렬 불필요 + 속도 최우선이면: unordered_map" << endl;
+
+	return 0;
+}
+#endif
+
+// =====================================================
+// 예제 5: "도구 선택 가이드" -- 상황별 추천 + Level 2 맛보기
+// =====================================================
+#ifdef RUN_WEEK06_EXAMPLE05
+int main() {
+	cout << "===== [예제 5] 도구 선택 가이드 + Level 2 맛보기 =====" << endl;
+	cout << endl;
+
+	// ── Part A: 상황별 자료구조 추천 ──
+	// Level 1 정리: 상황에 맞는 도구를 고르는 것이 첫걸음
+	cout << "━━━ Part A: 상황별 자료구조 추천 ━━━" << endl;
+	cout << endl;
+
+	// 상황 → 추천 자료구조 매핑
+	vector<pair<string, string>> guide = {
+		{"순서대로 데이터를 담고 싶다",         "→ vector"},
+		{"되돌리기 기능이 필요하다",            "→ stack (LIFO)"},
+		{"대기열이 필요하다",                   "→ queue (FIFO)"},
+		{"이름으로 데이터를 찾고 싶다",         "→ map / unordered_map"},
+		{"중복을 제거하고 싶다",                "→ set / unordered_set"},
+		{"정렬된 순서가 필요하다",              "→ map / set (unordered 아님!)"},
+		{"속도가 최우선이다 (정렬 불필요)",     "→ unordered_map / unordered_set"},
+	};
+
+	cout << "  [상황별 도구 선택 가이드]" << endl;
+	for (auto& g : guide) {
+		cout << "  \"" << g.first << "\"" << endl;
+		cout << "      " << g.second << endl;
+	}
+	cout << endl;
+
+	cout << "  [선택의 세 가지 기준]" << endl;
+	cout << "  1. 성능:      자주 하는 연산이 빠른 도구를 고른다" << endl;
+	cout << "  2. 의도 표현: 코드를 읽는 사람이 의도를 알 수 있는 도구" << endl;
+	cout << "  3. 요구사항:  정렬? 중복? key-value? → 기능이 맞는 도구" << endl;
+	cout << endl;
+
+	// ── Part B: Level 2 맛보기 ──
+	// 그런데 아직 못 푼 문제가 있다...
+	cout << "━━━ Part B: 아직 못 푼 문제 → Level 2 맛보기 ━━━" << endl;
+	cout << endl;
+
+	vector<int> data = { 38, 27, 43, 3, 9, 82, 10 };
+
+	cout << "  데이터: ";
+	for (int n : data) cout << n << " ";
+	cout << endl;
+	cout << endl;
+
+	// 문제 1: 가장 큰 값 찾기
+	cout << "  [문제] 가장 큰 값을 찾으려면?" << endl;
+
+	// 지금 방법: 처음부터 끝까지 순회 -- O(n)
+	int maxVal = data[0];
+	for (int n : data) {
+		if (n > maxVal) maxVal = n;
+	}
+	cout << "  지금 방법: 처음부터 끝까지 순회 → " << maxVal << " (O(n))" << endl;
+
+	// 만약 데이터가 정렬되어 있다면?
+	vector<int> sorted_data = data;
+	sort(sorted_data.begin(), sorted_data.end());
+	cout << "  정렬된 데이터: ";
+	for (int n : sorted_data) cout << n << " ";
+	cout << endl;
+	cout << "  정렬되어 있다면? 맨 끝을 보면 됨 → " << sorted_data.back() << " (O(1)!)" << endl;
+	cout << endl;
+
+	// 문제 2: 특정 값 찾기
+	cout << "  [문제] 특정 값(43)을 찾으려면?" << endl;
+
+	// 지금 방법: 처음부터 순회 -- O(n)
+	int target = 43;
+	int count = 0;
+	for (int n : data) {
+		count++;
+		if (n == target) break;
+	}
+	cout << "  지금 방법: 처음부터 순회 → " << count << "번 비교 (O(n))" << endl;
+
+	// 정렬된 데이터에서 이진 탐색을 쓸 수 있다면?
+	cout << "  정렬 + 이진 탐색이라면? → ~3번 비교면 충분 (O(log n)!)" << endl;
+	cout << endl;
+
+	// "정렬"과 "탐색" -- Level 2에서 만납니다!
+	cout << "  ┌─────────────────────────────────────────────┐" << endl;
+	cout << "  │  정렬하는 비용은 얼마나 들까?               │" << endl;
+	cout << "  │  정렬된 데이터에서 빠르게 찾는 방법은?      │" << endl;
+	cout << "  │                                             │" << endl;
+	cout << "  │  → 이 질문들의 답은 Level 2에서 만납니다!   │" << endl;
+	cout << "  └─────────────────────────────────────────────┘" << endl;
+	cout << endl;
+
+	cout << "========================================" << endl;
+	cout << "Level 1 완주!" << endl;
+	cout << "시간 복잡도(1회차) → 자료구조별 특성(2~5회차) → 도구 선택(6회차)" << endl;
+	cout << "\"도구를 아는 것\"에서 \"도구를 고르는 것\"으로 성장했습니다." << endl;
+	cout << "Level 2에서는 \"정렬\"과 \"탐색\"의 세계로 들어갑니다!" << endl;
+
+	return 0;
+}
+#endif
 
 
 // =====================================================
