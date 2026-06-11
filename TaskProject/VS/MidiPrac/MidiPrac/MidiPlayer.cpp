@@ -1,167 +1,100 @@
-#include "MidiPlayer.h"
-#include <deque>
+﻿#include "MidiPlayer.h"
 #include <algorithm>
+#include <vector>
 
-bool Compare(MidiEvent a, MidiEvent b)
-{
-	return a.absTime < b.absTime;
-}
+using namespace std;
 
-MidiPlayer::MidiPlayer(string filePath)
-{
-	File.FileOpen(filePath);
-	m_device = NULL;
-}
+// 생성자: 파일 경로로 CMidi를 구성하면 그 자리에서 파일 파싱이 끝난다.
+MidiPlayer::MidiPlayer(const string& filePath)
+	: m_midi(filePath.c_str()), m_device(NULL)
+{}
 
 MidiPlayer::~MidiPlayer()
 {
-
+	if (m_device) midiOutClose(m_device);
 }
 
+// 파싱된 모든 채널 이벤트를 절대 시각(ms) 순서대로 MIDI 출력 장치로 송출한다.
 void MidiPlayer::Play()
 {
-	if (midiOutOpen(&m_device, 0, 0, 0, 0) != MMSYSERR_NOERROR)	return;
-	
-	vector<MidiTrack> tracks = File.GetTrack();
-	vector<MidiEvent> events = tracks[0].events;
-	auto start = chrono::high_resolution_clock::now();
-	for (auto& e : events)
-	{
-		while (true)
-		{
-			auto now = chrono::high_resolution_clock::now();
-			auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - start).count();
+	if (midiOutOpen(&m_device, 0, 0, 0, 0) != MMSYSERR_NOERROR) return;  // 기본 출력 장치 열기
 
-			if (elapsed >= e.absTime)
-				break;
+	// 트랙별로 흩어져 있는 채널 이벤트를 (시각, 이벤트) 쌍으로 모아 시각순으로 정렬한다.
+	vector<pair<double, const CMidiEvent*>> allEvents;
+	for (const auto& track : m_midi.GetTracks())
+	{
+		for (const auto& record : track.GetEvents())
+		{
+			if (record.IsMidiEvent())
+				allEvents.emplace_back(record.absTimeMs, record.AsMidi());
+		}
+	}
+	sort(allEvents.begin(), allEvents.end(),
+		[](const auto& a, const auto& b) { return a.first < b.first; });
+
+	auto start    = chrono::high_resolution_clock::now();
+	auto fpsTimer = start;
+	int  frameCount = 0;
+	int  eventIndex = 0;
+	int  totalEvents = (int)allEvents.size();
+
+	// 실제 경과 시간을 따라가며, 재생 시각에 도달한 이벤트들을 차례로 내보낸다.
+	while (eventIndex < totalEvents)
+	{
+		auto   now     = chrono::high_resolution_clock::now();
+		double elapsed = chrono::duration_cast<chrono::duration<double, milli>>(now - start).count();
+
+		// 현재 경과 시간 이전에 일어나야 할 이벤트를 모두 송출
+		while (eventIndex < totalEvents && elapsed >= allEvents[eventIndex].first)
+		{
+			SendMidi(*allEvents[eventIndex].second);
+			eventIndex++;
 		}
 
-		SendMidi(e);
+		// FPS 측정: 루프 횟수를 세어 1초마다 출력
+		frameCount++;
+		double fpsElapsed = chrono::duration_cast<chrono::duration<double>>(now - fpsTimer).count();
+		if (fpsElapsed >= 1.0)
+		{
+			printf("\rFPS: %d  ", (int)(frameCount / fpsElapsed));
+			fpsTimer   = now;
+			frameCount = 0;
+		}
 	}
+	printf("\n");
 
 	midiOutClose(m_device);
+	m_device = NULL;
 }
 
-void MidiPlayer::PlayAllTrack()
+// CMidiEvent 하나를 winmm이 요구하는 32비트 메시지로 만들어 송출한다.
+// 메시지 바이트 배치: [상태바이트] | [데이터1 << 8] | [데이터2 << 16]
+void MidiPlayer::SendMidi(const CMidiEvent& event)
 {
-	midiOutOpen(&m_device, 0, 0, 0, 0);
+	DWORD msg  = 0;
+	bool  send = false;
 
-	vector<MidiTrack> tracks = File.GetTrack();
-	vector<deque<MidiEvent>> queue;
-	for (auto& t : tracks)
+	switch (event.GetStatus())
 	{
-		deque<MidiEvent> ev;
-
-		for (auto& e : t.events)
-		{
-			ev.push_back(e);
-		}
-
-		queue.push_back(ev);
-	}
-
-	int finished = 0;
-	int size = tracks.size();
-	auto start = chrono::high_resolution_clock::now();
-
-	while (finished < size)
-	{
-		auto now = chrono::high_resolution_clock::now();
-		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - start).count();
-		finished = 0;
-		for (auto& t : queue)
-		{
-			if (t.size() == 0)
-			{
-				finished++;
-				continue;
-			}
-
-			if (elapsed >= t.front().absTime)
-			{
-				SendMidi(t.front());
-				t.pop_front();
-			}
-		}
-	}
-
-	midiOutClose(m_device);
-}
-
-void MidiPlayer::PlayAllTrack2()
-{
-	midiOutOpen(&m_device, 0, 0, 0, 0);
-
-	vector<MidiTrack> tracks = File.GetTrack();
-	vector<MidiEvent> events;
-	for (auto& t : tracks)
-	{
-		for (auto& e : t.events)
-		{
-			events.push_back(e);
-		}
-	}
-
-	sort(events.begin(), events.end(), Compare);
-
-	auto start = chrono::high_resolution_clock::now();
-
-	for (auto& e : events)
-	{
-		auto now = chrono::high_resolution_clock::now();
-		auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - start).count();
-
-		while (true)
-		{
-			auto now = chrono::high_resolution_clock::now();
-			auto elapsed = chrono::duration_cast<chrono::milliseconds>(now - start).count();
-
-			if (elapsed >= e.absTime)
-				break;
-		}
-
-		SendMidi(e);
-	}
-
-	midiOutClose(m_device);
-}
-
-
-void MidiPlayer::SendMidi(MidiEvent event)
-{
-	bool note = false;
-	DWORD msg;
-
-	switch (event.eEvent)
-	{
-	case ControlChange:
-		if (event.data1 == 7)
-		{
-			printf("channel %d volume %d\n",event.channel, event.data2);
-		}
 	case NoteOn:
 	case NoteOff:
 	case PolyphonicKeyPressure:
+	case ControlChange:
 	case PitchBend:
-		note = true;
-		msg = event.type | (event.data1 << 8) | (event.data2 << 16);
+		// 데이터 2바이트짜리 이벤트
+		msg  = event.GetStatusByte() | (event.GetData1() << 8) | (event.GetData2() << 16);
+		send = true;
 		break;
 	case ProgramChange:
 	case ChannelPressure:
-		if (event.channel == 9)	return;
-		note = true;
-		msg = event.type | (event.data1 << 8);
+		// 데이터 1바이트짜리 이벤트
+		if (event.GetChannel() == 9) return;  // 채널 9는 타악기(드럼) — 악기 변경은 건너뜀
+		msg  = event.GetStatusByte() | (event.GetData1() << 8);
+		send = true;
 		break;
 	default:
 		break;
 	}
 
-	if (!note)	return;
-
-	midiOutShortMsg(m_device, msg);
-}
-
-bool MidiPlayer::CompareEvent(MidiEvent a, MidiEvent b)
-{
-	return a.absTime < b.absTime;
+	if (send) midiOutShortMsg(m_device, msg);
 }

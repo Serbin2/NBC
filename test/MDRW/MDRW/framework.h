@@ -13,3 +13,16 @@
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
+
+// C++ 표준 라이브러리
+#include <string>
+#include <vector>
+
+// 추가 Windows 헤더 (공통 대화 상자, 셸, RichEdit)
+#include <commdlg.h>
+#include <shellapi.h>
+#define _RICHEDIT_VER 0x0500
+#include <richedit.h>
+
+#pragma comment(lib, "comdlg32.lib")
+#pragma comment(lib, "shell32.lib")

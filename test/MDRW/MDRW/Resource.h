@@ -1,18 +1,28 @@
 ﻿//{{NO_DEPENDENCIES}}
 // Microsoft Visual C++에서 생성한 포함 파일입니다.
-// 다음에서 사용 MidiPrac.rc
+// 다음에서 사용 MDRW.rc
 
 #define IDS_APP_TITLE			103
 
 #define IDR_MAINFRAME			128
-#define IDD_MIDIPRAC_DIALOG	102
+#define IDD_MDRW_DIALOG	102
 #define IDD_ABOUTBOX			103
 #define IDM_ABOUT				104
 #define IDM_EXIT				105
-#define IDI_MIDIPRAC			107
+#define IDI_MDRW			107
 #define IDI_SMALL				108
-#define IDC_MIDIPRAC			109
+#define IDC_MDRW			109
 #define IDC_MYICON				2
+
+// 마크다운 리더/에디터용 추가 ID
+#define IDC_EDIT                1000
+#define IDM_NEW                 32771
+#define IDM_OPEN                32772
+#define IDM_SAVE                32773
+#define IDM_SAVEAS              32774
+#define IDM_READMODE            32775
+#define IDM_EDITMODE            32776
+
 #ifndef IDC_STATIC
 #define IDC_STATIC				-1
 #endif

@@ -2,35 +2,42 @@
 //
 
 #include <iostream>
-#include <string>
-#include <map>
 #include <math.h>
-#include <chrono>
+using namespace std;
 
-int main()
+int sumDiv(int n)
 {
-	srand(time(NULL));
-
-	std::map<int, int> intmap;
-
-	for (int i = 0; i < 10000000; i++)
+	int sq = sqrt(n);
+	int answer = 0;
+	for (int i = 2; i <= sq; i++)
 	{
-		intmap[rand() % 1000]++;
+		if (n % i == 0)
+		{
+			answer += i;
+			answer += (n / i);
+		}
 	}
 
-	std::chrono::steady_clock::time_point now;
-	std::chrono::steady_clock::time_point elapse;
+	if (sq * sq == n)
+	{
+		answer -= sq;
+	}
+	return answer;
+}
 
+int main() {
+	int n;
+	cin >> n;
 
-	now = std::chrono::steady_clock::now();
-	auto in = intmap.find(10);
-	elapse = std::chrono::steady_clock::now();
-	std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(elapse - now).count() << std::endl;
-
-	now = std::chrono::steady_clock::now();
-	int bIn = intmap.count(10);
-	elapse = std::chrono::steady_clock::now();
-	std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(elapse - now).count() << std::endl;
+	if (sumDiv(n) == n)
+	{
+		cout << 1;
+	}
+	else
+	{
+		cout << 0;
+	}
+	return 0;
 }
 
 // 프로그램 실행: <Ctrl+F5> 또는 [디버그] > [디버깅하지 않고 시작] 메뉴
