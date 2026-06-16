@@ -124,11 +124,13 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Midi.h" />
+    <ClInclude Include="MidiOut.h" />
     <ClInclude Include="MidiPlayer.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Midi.cpp" />
+    <ClCompile Include="MidiOut.cpp" />
     <ClCompile Include="MidiPlayer.cpp" />
     <ClCompile Include="MidiPrac.cpp" />
   </ItemGroup>

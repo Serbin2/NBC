@@ -26,14 +26,20 @@ CMidiEvent::CMidiEvent(FILE* fp, uint8_t statusByte)
 
 // ──────────────────────────────────────────────
 // CSysExEvent — 시스템 익스클루시브 (0xF0 / 0xF7 은 호출자가 이미 소비)
-// "VLQ 길이 + 그 길이만큼의 데이터" 구조. 내용은 해석하지 않고 통째로 건너뛴다.
+// "VLQ 길이 + 그 길이만큼의 데이터" 구조.
+// GM/GS/XG 리셋 같은 초기화 메시지가 실려 오므로 데이터를 보관해 두고,
+// 재생 시 출력 장치로 그대로 전달한다.
 // ──────────────────────────────────────────────
-CSysExEvent::CSysExEvent(FILE* fp)
+CSysExEvent::CSysExEvent(FILE* fp, uint8_t leadByte)
+	: m_iLeadByte(leadByte)
 {
 	uint32_t vlqLen = 0;
 	uint32_t length = ReadVLQ(fp, vlqLen);
 	m_iByteLength = vlqLen + length;            // 길이 필드(VLQ) + 데이터부
-	for (uint32_t i = 0; i < length; i++) fgetc(fp);  // 데이터 건너뛰기
+
+	m_aData.resize(length);
+	if (length > 0)
+		fread(m_aData.data(), 1, length, fp);   // 데이터 보관 (0xF0형이면 보통 끝에 0xF7 포함)
 }
 
 // ──────────────────────────────────────────────
@@ -82,7 +88,7 @@ void CHeader::Parse(FILE* fp)
 	ParseChunkHeader(fp);            // 이름 + 길이
 	m_iFormat   = ReadBE16(fp);     // 0/1/2 (트랙 구성 방식)
 	m_iTracks   = ReadBE16(fp);     // 트랙 청크 개수
-	m_iDivision = ReadBE16(fp);     // 4분음표당 틱 수(PPQN)
+	m_iDivision = ReadBE16(fp);     // 시간 단위: PPQN 또는 SMPTE (해석은 CHeader::IsSmpte() 참고)
 }
 
 // ──────────────────────────────────────────────
@@ -125,9 +131,15 @@ void CTrack::Parse(FILE* fp)
 		}
 		else if (bt == 0xF0 || bt == 0xF7)
 		{
-			// SysEx 이벤트 — 건너뛰기만 한다
-			auto pEvent = make_unique<CSysExEvent>(fp);
+			// SysEx 이벤트 — 재생 시 전달할 수 있도록 시간 정보와 함께 저장
+			auto pEvent = make_unique<CSysExEvent>(fp, bt);
 			bytesRead += pEvent->GetByteLength();
+
+			CEventRecord record;
+			record.absoluteTick = absTick;
+			record.absTimeMs    = 0.0;
+			record.event        = std::move(pEvent);
+			m_aEvents.push_back(std::move(record));
 		}
 		else
 		{
@@ -190,12 +202,33 @@ double CMidi::TicksToMs(uint32_t absTick, uint16_t division,
 	return ms;
 }
 
-// 모든 트랙의 템포 변경을 하나로 모아 전역 템포 맵을 만든 뒤,
-// 각 이벤트의 absTimeMs 를 채운다.
-// Format 1 파일에서 템포는 트랙 0에, 음표는 트랙 1+ 에 있는 경우를
-// 올바르게 처리하기 위해 "전역" 템포 맵을 쓴다.
+// 각 이벤트의 absTimeMs(절대 시각)를 채운다.
+// division 해석 방식(PPQN/SMPTE)에 따라 틱→시간 변환 규칙이 다르다.
 void CMidi::ComputeAbsTimes()
 {
+	// ── SMPTE 방식 (division 최상위 비트 = 1) ──
+	// 틱이 박자가 아니라 시간(프레임)에 직접 고정된다.
+	//   1틱당 ms = 1000 / (프레임 레이트 × 프레임당 틱 수)
+	// 템포 메타 이벤트는 SMPTE 모드의 시간 계산에 영향을 주지 않는다.
+	if (m_cHeader.IsSmpte())
+	{
+		double ticksPerFrame = m_cHeader.GetTicksPerFrame();
+		if (ticksPerFrame <= 0.0) ticksPerFrame = 1.0;   // 잘못된 파일 방어 (0 나눗셈 방지)
+		double msPerTick = 1000.0 / (m_cHeader.GetSmpteFps() * ticksPerFrame);
+
+		for (auto& track : m_aTracks)
+		{
+			for (auto& record : track.GetEvents())
+				record.absTimeMs = record.absoluteTick * msPerTick;
+		}
+		return;
+	}
+
+	// ── PPQN 방식 (division 최상위 비트 = 0) ──
+	// 모든 트랙의 템포 변경을 하나로 모아 전역 템포 맵을 만든 뒤 틱을 시간으로 바꾼다.
+	// Format 1 파일에서 템포는 트랙 0에, 음표는 트랙 1+ 에 있는 경우를
+	// 올바르게 처리하기 위해 "전역" 템포 맵을 쓴다.
+
 	// 1. 모든 트랙에서 템포 변경을 수집해 틱 순으로 정렬
 	vector<TempoChange> tempoMap;
 	for (const auto& track : m_aTracks)
@@ -210,6 +243,7 @@ void CMidi::ComputeAbsTimes()
 
 	// 2. 모든 이벤트의 틱을 절대 시각(ms)으로 변환
 	uint16_t division = m_cHeader.GetDivision();
+	if (division == 0) division = 480;   // 잘못된 파일 방어 (0이면 변환 불가)
 	for (auto& track : m_aTracks)
 	{
 		for (auto& record : track.GetEvents())

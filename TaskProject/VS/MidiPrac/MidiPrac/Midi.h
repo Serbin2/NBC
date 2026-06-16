@@ -17,7 +17,7 @@ using namespace std;
 //
 //   이벤트는 세 종류:
 //     - 채널(MIDI) 이벤트 : NoteOn/NoteOff/ControlChange 등 실제 연주
-//     - SysEx 이벤트      : 장치 고유 메시지 (여기서는 건너뜀)
+//     - SysEx 이벤트      : 장치 고유 메시지 (보관해 두었다가 재생 시 그대로 전달)
 //     - 메타 이벤트       : 템포/트랙명/트랙끝 등 연주 외 정보
 // ──────────────────────────────────────────────────────────────
 
@@ -86,12 +86,23 @@ private:
 	uint8_t m_iData2;
 };
 
-// SysEx 이벤트 — 장치 고유 메시지. 본 구현은 내용을 해석하지 않고 길이만큼 건너뛴다.
+// SysEx 이벤트 — 장치 고유 메시지 (GM/GS/XG 리셋, 마스터 볼륨 같은 초기화가 주로 실려 온다).
+// 데이터를 보관해 두었다가 재생 시 출력 장치로 그대로 전달한다.
+//  - 0xF0 시작: 일반 SysEx. 데이터 끝에 보통 종료 바이트(0xF7)가 포함된다.
+//  - 0xF7 시작: 이스케이프(연속 패킷 등의 원시 바이트). 프레이밍 없이 그대로 보낸다.
+//  ※ 여러 패킷으로 쪼개진 SysEx의 재조립은 지원하지 않는다(실제 파일에서는 드묾).
 class CSysExEvent : public IEvent
 {
 public:
-	CSysExEvent(FILE* fp);  // 0xF0 / 0xF7 은 호출자가 이미 소비한 상태로 들어온다
+	CSysExEvent(FILE* fp, uint8_t leadByte);  // 0xF0/0xF7 은 호출자가 이미 소비한 상태로 들어온다
 	EventType GetType() const override { return SysExEvent; }
+
+	uint8_t GetLeadByte() const { return m_iLeadByte; }          // 0xF0 또는 0xF7
+	const vector<uint8_t>& GetData() const { return m_aData; }   // 길이 필드 뒤의 원본 데이터
+
+private:
+	uint8_t m_iLeadByte = 0xF0;
+	vector<uint8_t> m_aData;
 };
 
 // 메타 이벤트 — 연주 외 정보. 여기서는 템포(0x51)와 트랙끝(0x2F)만 의미 있게 다룬다.
@@ -131,6 +142,12 @@ struct CEventRecord
 	{
 		return IsMidiEvent() ? static_cast<const CMidiEvent*>(event.get()) : nullptr;
 	}
+
+	bool IsSysEx() const { return event && event->GetType() == ::SysExEvent; }
+	const CSysExEvent* AsSysEx() const
+	{
+		return IsSysEx() ? static_cast<const CSysExEvent*>(event.get()) : nullptr;
+	}
 };
 
 // 청크 공통 헤더("이름 4바이트 + 길이 4바이트")를 담는 기반 클래스.
@@ -159,10 +176,25 @@ public:
 	uint16_t GetNumberOfTracks() const { return m_iTracks; }
 	uint16_t GetDivision()       const { return m_iDivision; }
 
+	// division 최상위 비트: 0 = PPQN(박자 기반), 1 = SMPTE(시간/프레임 기반)
+	bool IsSmpte() const { return (m_iDivision & 0x8000) != 0; }
+	// SMPTE 프레임 레이트. 상위 바이트에 -24/-25/-29/-30 (2의 보수)으로 저장되며,
+	// -29 는 NTSC 드롭 프레임을 뜻하므로 실제 값은 29.97fps 다.
+	double GetSmpteFps() const
+	{
+		int fps = -(int8_t)(m_iDivision >> 8);
+		return fps == 29 ? 29.97 : (double)fps;
+	}
+	// SMPTE 프레임 하나당 틱 수(하위 바이트)
+	uint8_t GetTicksPerFrame() const { return (uint8_t)(m_iDivision & 0xFF); }
+
 private:
 	uint16_t m_iFormat   = 0;     // FileFormat 값(0/1/2)
 	uint16_t m_iTracks   = 0;     // 트랙 청크 개수
-	uint16_t m_iDivision = 480;   // 4분음표당 틱 수(PPQN). 틱→시간 변환의 기준 단위
+	// 시간 단위 정의. 두 방식이 한 필드에 인코딩된다:
+	//  - 최상위 비트 0: 하위 15비트 = 4분음표당 틱 수(PPQN) → 템포 이벤트와 조합해 시간 계산
+	//  - 최상위 비트 1: 상위 바이트 = -프레임레이트, 하위 바이트 = 프레임당 틱 수(SMPTE)
+	uint16_t m_iDivision = 480;
 };
 
 // 트랙 청크 "MTrk" — 시간순 이벤트들의 모음.
@@ -179,7 +211,7 @@ public:
 	const vector<TempoChange>&   GetTempoChanges() const { return m_aTempoChanges; }
 
 private:
-	vector<CEventRecord> m_aEvents;        // 이 트랙의 연주 이벤트들
+	vector<CEventRecord> m_aEvents;        // 이 트랙의 연주/SysEx 이벤트들
 	vector<TempoChange>  m_aTempoChanges;  // 이 트랙에서 발견된 템포 변경들
 };
 
