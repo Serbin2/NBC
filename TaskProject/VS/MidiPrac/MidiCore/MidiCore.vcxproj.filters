@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="소스 파일">
@@ -11,27 +11,24 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="MidiPlayer.h">
+    <ClInclude Include="..\MidiPrac\Midi.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="MidiOut.h">
+    <ClInclude Include="..\MidiPrac\MidiOut.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Midi.h">
-      <Filter>소스 파일</Filter>
+    <ClInclude Include="..\MidiPrac\Util.h">
+      <Filter>헤더 파일</Filter>
     </ClInclude>
-    <ClInclude Include="Util.h">
-      <Filter>소스 파일</Filter>
-    </ClInclude>
-    <ClInclude Include="MidiCoreApi.h">
+    <ClInclude Include="..\MidiPrac\MidiCoreApi.h">
       <Filter>헤더 파일</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MidiPrac.cpp">
+    <ClCompile Include="..\MidiPrac\Midi.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
-    <ClCompile Include="MidiPlayer.cpp">
+    <ClCompile Include="..\MidiPrac\MidiOut.cpp">
       <Filter>소스 파일</Filter>
     </ClCompile>
   </ItemGroup>

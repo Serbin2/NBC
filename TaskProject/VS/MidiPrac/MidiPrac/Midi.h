@@ -1,8 +1,10 @@
 ﻿#pragma once
+#include "MidiCoreApi.h"   // MIDICORE_API (dllexport/dllimport)
 #include "Util.h"
 #include <vector>
 #include <memory>
 #include <cstdint>
+#include <string>
 
 using namespace std;
 
@@ -52,7 +54,7 @@ enum MidiEventStatus
 // 모든 이벤트의 공통 인터페이스.
 // m_iByteLength: 상태/판별 바이트 이후 이 이벤트가 파일에서 소비한 데이터 바이트 수.
 //                트랙 잔여 길이를 줄여 나가는 데 쓰인다.
-class IEvent
+class MIDICORE_API IEvent
 {
 public:
 	virtual ~IEvent() = default;
@@ -64,7 +66,7 @@ protected:
 
 // 채널(MIDI) 이벤트 — 실제 연주 데이터.
 // 상태 바이트 1개 + 데이터 바이트 1~2개로 구성된다.
-class CMidiEvent : public IEvent
+class MIDICORE_API CMidiEvent : public IEvent
 {
 public:
 	// statusByte: 호출자가 이미 읽어 둔 상태 바이트(러닝 스테이터스 복원 포함).
@@ -91,7 +93,7 @@ private:
 //  - 0xF0 시작: 일반 SysEx. 데이터 끝에 보통 종료 바이트(0xF7)가 포함된다.
 //  - 0xF7 시작: 이스케이프(연속 패킷 등의 원시 바이트). 프레이밍 없이 그대로 보낸다.
 //  ※ 여러 패킷으로 쪼개진 SysEx의 재조립은 지원하지 않는다(실제 파일에서는 드묾).
-class CSysExEvent : public IEvent
+class MIDICORE_API CSysExEvent : public IEvent
 {
 public:
 	CSysExEvent(FILE* fp, uint8_t leadByte);  // 0xF0/0xF7 은 호출자가 이미 소비한 상태로 들어온다
@@ -105,8 +107,14 @@ private:
 	vector<uint8_t> m_aData;
 };
 
-// 메타 이벤트 — 연주 외 정보. 여기서는 템포(0x51)와 트랙끝(0x2F)만 의미 있게 다룬다.
-class CMetaEvent : public IEvent
+// 메타 이벤트 — 연주 외 정보(템포/트랙명/박자표/가사 등).
+// 템포(0x51)는 값을 따로 뽑아 두고, 그 외 모든 메타의 본문도 원본 바이트로 보관한다.
+// → 시각화 단계에서 트랙명·박자표·조표·가사 등을 자유롭게 꺼내 쓸 수 있다.
+//
+// 주요 메타 타입: 0x01 텍스트, 0x02 저작권, 0x03 트랙명, 0x04 악기명,
+//                0x05 가사, 0x06 마커, 0x2F 트랙끝, 0x51 템포,
+//                0x58 박자표, 0x59 조표
+class MIDICORE_API CMetaEvent : public IEvent
 {
 public:
 	CMetaEvent(FILE* fp);   // 0xFF 는 호출자가 이미 소비한 상태로 들어온다
@@ -114,12 +122,19 @@ public:
 
 	uint8_t  GetMetaType()   const { return m_iMetaType; }
 	uint32_t GetTempo()      const { return m_iTempo; }            // 박자당 마이크로초
+	const vector<uint8_t>& GetData() const { return m_aData; }     // 메타 본문 원본 바이트
+	string   GetText()       const { return string(m_aData.begin(), m_aData.end()); } // 텍스트류(0x01~0x07)
+
 	bool IsEndOfTrack()      const { return m_iMetaType == 0x2F; } // 트랙 종료 표시
 	bool IsSetTempo()        const { return m_iMetaType == 0x51; } // 템포 변경
+	bool IsTrackName()       const { return m_iMetaType == 0x03; } // 트랙 이름
+	bool IsTimeSignature()   const { return m_iMetaType == 0x58; } // 박자표
+	bool IsKeySignature()    const { return m_iMetaType == 0x59; } // 조표
 
 private:
 	uint8_t  m_iMetaType = 0;
 	uint32_t m_iTempo    = 0;
+	vector<uint8_t> m_aData;   // 메타 데이터부(타입/길이 필드 제외)의 원본
 };
 
 // 템포 변경 지점 — (틱 위치, 그 시점부터의 템포).
@@ -148,10 +163,16 @@ struct CEventRecord
 	{
 		return IsSysEx() ? static_cast<const CSysExEvent*>(event.get()) : nullptr;
 	}
+
+	bool IsMeta() const { return event && event->GetType() == ::MetaEvent; }
+	const CMetaEvent* AsMeta() const
+	{
+		return IsMeta() ? static_cast<const CMetaEvent*>(event.get()) : nullptr;
+	}
 };
 
 // 청크 공통 헤더("이름 4바이트 + 길이 4바이트")를 담는 기반 클래스.
-class CChunk
+class MIDICORE_API CChunk
 {
 public:
 	CChunk() = default;
@@ -166,7 +187,7 @@ protected:
 };
 
 // 헤더 청크 "MThd" — 파일 전체의 포맷 정보.
-class CHeader : public CChunk
+class MIDICORE_API CHeader : public CChunk
 {
 public:
 	CHeader() = default;
@@ -197,8 +218,19 @@ private:
 	uint16_t m_iDivision = 480;
 };
 
+// 시각화용 노트 막대 — NoteOn↔NoteOff 를 짝지어 만든 "하나의 음".
+// (피아노롤에서 사각형 하나에 해당: 시작/끝 시각 + 음높이 + 채널 + 세기)
+struct NoteSegment
+{
+	uint8_t channel;     // 0~15
+	uint8_t note;        // 음높이 0~127
+	uint8_t velocity;    // NoteOn 세기 (색/투명도 등에 활용)
+	double  startMs;     // 시작 시각
+	double  endMs;       // 끝 시각 (NoteOff 시점, 못 닫히면 트랙 마지막 시각)
+};
+
 // 트랙 청크 "MTrk" — 시간순 이벤트들의 모음.
-class CTrack : public CChunk
+class MIDICORE_API CTrack : public CChunk
 {
 public:
 	CTrack() = default;
@@ -210,16 +242,28 @@ public:
 	const vector<CEventRecord>&  GetEvents()       const { return m_aEvents; }
 	const vector<TempoChange>&   GetTempoChanges() const { return m_aTempoChanges; }
 
+	// 시각화 보조 ──────────────────────────────────────
+	// 이 트랙의 첫 트랙명(0x03) 메타를 돌려준다. 없으면 빈 문자열.
+	string GetTrackName() const;
+	// NoteOn/NoteOff 를 짝지어 피아노롤용 노트 막대 목록으로 만든다.
+	// (absTimeMs 가 채워진 뒤 = 파싱 완료 후에 호출해야 한다)
+	vector<NoteSegment> BuildNoteSegments() const;
+
 private:
-	vector<CEventRecord> m_aEvents;        // 이 트랙의 연주/SysEx 이벤트들
+	vector<CEventRecord> m_aEvents;        // 이 트랙의 연주/SysEx/메타 이벤트들
 	vector<TempoChange>  m_aTempoChanges;  // 이 트랙에서 발견된 템포 변경들
 };
 
 // MIDI 파일 전체 — 헤더 + 트랙들을 파싱하고, 각 이벤트의 절대 시각을 계산한다.
-class CMidi
+class MIDICORE_API CMidi
 {
 public:
 	explicit CMidi(const char* filePath);   // 생성과 동시에 파일 전체를 파싱
+
+	// 트랙/이벤트를 통째로 담는 무거운 객체이고 이동 전용 멤버(CTrack)를 가지므로 복사 금지.
+	// (dllexport가 암시적 복사 연산을 강제 생성하다 CTrack 복사 불가로 실패하는 것도 막는다)
+	CMidi(const CMidi&) = delete;
+	CMidi& operator=(const CMidi&) = delete;
 
 	const CHeader&        GetHeader() const { return m_cHeader; }
 	const vector<CTrack>& GetTracks() const { return m_aTracks; }

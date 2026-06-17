@@ -84,8 +84,8 @@ static void SelectOutputInteractive(PlayerOptions& opt)
 int main(int argc, char* argv[])
 {
 	PlayerOptions opt;
-	//opt.midiPath = "./goit.mid";   // 기본 파일 (작업 디렉터리 기준)
-	opt.midiPath = "./take5.mid";   // 기본 파일 (작업 디렉터리 기준)
+	opt.midiPath = "./goit.mid";   // 기본 파일 (작업 디렉터리 기준)
+	//opt.midiPath = "./take5.mid";   // 기본 파일 (작업 디렉터리 기준)
 
 	// 백엔드를 CLI에서 직접 정했는지(-sf/-winmm/-d) 또는 -auto로 메뉴를 끄는지 추적.
 	// 어느 쪽도 아니면 시작 시 출력 선택 메뉴를 띄운다.

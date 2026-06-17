@@ -1,5 +1,6 @@
 ﻿#include "Midi.h"
 #include <algorithm>
+#include <cstring>
 
 // ──────────────────────────────────────────────
 // CMidiEvent — 채널(연주) 이벤트
@@ -45,7 +46,8 @@ CSysExEvent::CSysExEvent(FILE* fp, uint8_t leadByte)
 // ──────────────────────────────────────────────
 // CMetaEvent — 메타 이벤트 (0xFF 는 호출자가 이미 소비)
 // 구조: 타입 1바이트 + VLQ 길이 + 길이만큼의 데이터.
-// 템포(0x51)만 값을 읽어 두고, 나머지 메타는 건너뛴다.
+// 모든 메타의 본문을 m_aData 에 보관한다(트랙명/박자표/가사 등 시각화에 활용).
+// 템포(0x51)는 추가로 값을 뽑아 둔다.
 // ──────────────────────────────────────────────
 CMetaEvent::CMetaEvent(FILE* fp)
 {
@@ -55,17 +57,15 @@ CMetaEvent::CMetaEvent(FILE* fp)
 	uint32_t length = ReadVLQ(fp, vlqLen);
 	m_iByteLength = 1 + vlqLen + length;  // 타입(1) + 길이 필드(VLQ) + 데이터부
 
+	m_aData.resize(length);
+	if (length > 0)
+		fread(m_aData.data(), 1, length, fp);   // 본문 보관
+
+	// Set Tempo: 보관한 3바이트(빅엔디안)에서 4분음표 하나당 마이크로초를 뽑는다
 	if (m_iMetaType == 0x51 && length == 3)
-	{
-		// Set Tempo: 3바이트 빅엔디안 = 4분음표 하나당 마이크로초
-		m_iTempo = ((uint32_t)fgetc(fp) << 16)
-		         | ((uint32_t)fgetc(fp) << 8)
-		         |  (uint32_t)fgetc(fp);
-	}
-	else
-	{
-		for (uint32_t i = 0; i < length; i++) fgetc(fp);  // 관심 없는 메타는 건너뛰기
-	}
+		m_iTempo = ((uint32_t)m_aData[0] << 16)
+		         | ((uint32_t)m_aData[1] << 8)
+		         |  (uint32_t)m_aData[2];
 }
 
 // ──────────────────────────────────────────────
@@ -126,7 +126,16 @@ void CTrack::Parse(FILE* fp)
 			bytesRead += pEvent->GetByteLength();
 			if (pEvent->IsSetTempo())
 				m_aTempoChanges.push_back({ absTick, pEvent->GetTempo() }); // 템포 맵에 기록
-			if (pEvent->IsEndOfTrack())
+			bool isEnd = pEvent->IsEndOfTrack();
+
+			// 시각화(트랙명/박자표/가사 등)를 위해 시간과 함께 저장한다
+			CEventRecord record;
+			record.absoluteTick = absTick;
+			record.absTimeMs    = 0.0;
+			record.event        = std::move(pEvent);
+			m_aEvents.push_back(std::move(record));
+
+			if (isEnd)
 				break;  // 트랙 종료
 		}
 		else if (bt == 0xF0 || bt == 0xF7)
@@ -174,6 +183,72 @@ void CTrack::Parse(FILE* fp)
 			m_aEvents.push_back(std::move(record));
 		}
 	}
+}
+
+// 이 트랙의 첫 트랙명(메타 0x03)을 돌려준다. 없으면 빈 문자열.
+string CTrack::GetTrackName() const
+{
+	for (const auto& rec : m_aEvents)
+		if (const CMetaEvent* m = rec.AsMeta())
+			if (m->IsTrackName())
+				return m->GetText();
+	return "";
+}
+
+// NoteOn↔NoteOff 를 짝지어 피아노롤용 노트 막대(NoteSegment) 목록을 만든다.
+// 같은 (채널, 음높이)가 닫히기 전에 다시 켜지면 현재 시각에서 끊고 새로 시작하며,
+// 트랙이 끝날 때까지 닫히지 않은 음은 마지막 이벤트 시각으로 마감한다.
+// (absTimeMs 가 채워진 뒤 — 즉 CMidi 파싱 완료 후 — 호출해야 정확하다)
+vector<NoteSegment> CTrack::BuildNoteSegments() const
+{
+	vector<NoteSegment> segments;
+
+	// (채널, 음높이)별로 열려 있는 음 추적
+	bool    open[16][128];
+	double  startMs[16][128];
+	uint8_t startVel[16][128];
+	memset(open, 0, sizeof(open));
+
+	double lastMs = 0.0;
+	for (const auto& rec : m_aEvents)
+	{
+		if (rec.absTimeMs > lastMs) lastMs = rec.absTimeMs;
+
+		const CMidiEvent* e = rec.AsMidi();
+		if (!e) continue;
+
+		MidiEventStatus st = e->GetStatus();
+		int ch   = e->GetChannel();
+		int note = e->GetNote();
+
+		bool isOn  = (st == NoteOn) && e->GetVelocity() > 0;          // velocity 0 NoteOn = NoteOff
+		bool isOff = (st == NoteOff) || (st == NoteOn && e->GetVelocity() == 0);
+
+		if (isOn)
+		{
+			if (open[ch][note])   // 안 닫힌 채 다시 켜짐 → 현재 시각에서 끊고 새로 시작
+				segments.push_back({ (uint8_t)ch, (uint8_t)note, startVel[ch][note], startMs[ch][note], rec.absTimeMs });
+			open[ch][note]     = true;
+			startMs[ch][note]  = rec.absTimeMs;
+			startVel[ch][note] = e->GetVelocity();
+		}
+		else if (isOff && open[ch][note])
+		{
+			segments.push_back({ (uint8_t)ch, (uint8_t)note, startVel[ch][note], startMs[ch][note], rec.absTimeMs });
+			open[ch][note] = false;
+		}
+	}
+
+	// 닫히지 않은 음은 트랙 마지막 시각으로 마감
+	for (int ch = 0; ch < 16; ch++)
+		for (int n = 0; n < 128; n++)
+			if (open[ch][n])
+				segments.push_back({ (uint8_t)ch, (uint8_t)n, startVel[ch][n], startMs[ch][n], lastMs });
+
+	// 그리기 편하도록 시작 시각 순으로 정렬
+	sort(segments.begin(), segments.end(),
+		[](const NoteSegment& a, const NoteSegment& b) { return a.startMs < b.startMs; });
+	return segments;
 }
 
 // ──────────────────────────────────────────────

@@ -13,6 +13,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX              // min/max 매크로 차단 (std::min/std::max 사용을 위해)
 #endif
+#include "MidiCoreApi.h"      // MIDICORE_API (dllexport/dllimport)
 #include <windows.h>
 #include <mmsystem.h>         // winmm MIDI 출력 API
 #include <cstdint>
@@ -25,10 +26,10 @@
 // 작업/실행 폴더(및 그 상위 프로젝트 폴더)에서 *.sf2 사운드폰트를 찾아
 // 경로 목록으로 돌려준다. 중복 파일은 한 번만 포함한다.
 // (출력 선택 메뉴와 자동 탐색 양쪽에서 함께 쓴다)
-std::vector<std::string> ScanSoundFonts();
+MIDICORE_API std::vector<std::string> ScanSoundFonts();
 
 // 모든 백엔드가 구현해야 하는 출력 인터페이스
-class IMidiOut
+class MIDICORE_API IMidiOut
 {
 public:
 	virtual ~IMidiOut() = default;
@@ -59,7 +60,7 @@ public:
 // winmm 백엔드 — OS에 설치된 MIDI 출력 장치로 메시지를 보낸다.
 // 별도 음원이 없으면 보통 "Microsoft GS Wavetable Synth"가 소리를 낸다.
 // ──────────────────────────────────────────────
-class WinmmOut : public IMidiOut
+class MIDICORE_API WinmmOut : public IMidiOut
 {
 public:
 	// deviceIndex < 0 이면 MIDI_MAPPER(시스템 기본 장치). 실패 시 nullptr.
@@ -101,7 +102,7 @@ private:
 // ──────────────────────────────────────────────
 struct FluidApi;   // 함수 포인터 테이블 (MidiOut.cpp 내부 정의)
 
-class FluidSynthOut : public IMidiOut
+class MIDICORE_API FluidSynthOut : public IMidiOut
 {
 public:
 	// DLL 로드 → 신스 생성 → 사운드폰트 로드 → 오디오 드라이버 시작.
