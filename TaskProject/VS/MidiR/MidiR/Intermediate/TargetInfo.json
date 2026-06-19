@@ -1,0 +1,14 @@
+{
+	"Targets": [
+		{
+			"Name": "MidiR",
+			"Path": "..\\Source\\MidiR.Target.cs",
+			"Type": "Game"
+		},
+		{
+			"Name": "MidiREditor",
+			"Path": "..\\Source\\MidiREditor.Target.cs",
+			"Type": "Editor"
+		}
+	]
+}

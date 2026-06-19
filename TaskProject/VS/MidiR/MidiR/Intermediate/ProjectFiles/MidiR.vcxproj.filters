@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <None Include="..\..\MidiR.uproject" />
+    <Filter Include="Source">
+      <UniqueIdentifier>{F31BBDD1-B3E8-3BCC-9652-680E16935819}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\MidiR.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\Source\MidiREditor.Target.cs">
+      <Filter>Source</Filter>
+    </None>
+    <None Include="..\..\.vsconfig" />
+    <Filter Include="Config">
+      <UniqueIdentifier>{FA535FFB-25E1-3D20-B416-52F9BE21E06E}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Config\DefaultEditor.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultEngine.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultGame.ini">
+      <Filter>Config</Filter>
+    </None>
+    <None Include="..\..\Config\DefaultInput.ini">
+      <Filter>Config</Filter>
+    </None>
+    <Filter Include="Plugins">
+      <UniqueIdentifier>{BB38096A-B391-30DC-A0D4-4F3EA6B44507}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MidiCore">
+      <UniqueIdentifier>{5672F405-BF3E-3F86-8E6E-EB4D1B66B5AB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MidiCore\Source">
+      <UniqueIdentifier>{FAB96F56-4F92-3125-841B-4D36A5F15958}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MidiCore\Source\MidiCore">
+      <UniqueIdentifier>{33865D81-53C0-38B5-BEFC-486143EF839F}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Source\MidiCore\MidiCore.Build.cs">
+      <Filter>Plugins\MidiCore\Source\MidiCore</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Source\MidiCore\Private">
+      <UniqueIdentifier>{49A085CF-5076-35E9-A3C8-FEF5EA273361}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\FluidSynthRenderer.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\FluidSynthRenderer.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\Midi.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiBlueprintLibrary.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiCoreModule.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiPianoRollActor.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiSynthComponent.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
+    <Filter Include="Plugins\MidiCore\Source\MidiCore\Public">
+      <UniqueIdentifier>{8E292E37-38D2-3A47-94F0-396BF8EBCD44}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\Midi.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiBlueprintLibrary.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiCoreApi.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiPianoRollActor.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiSynthComponent.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\Util.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
+    <None Include="..\..\Plugins\MidiCore\MidiCore.uplugin">
+      <Filter>Plugins\MidiCore</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Source\ThirdParty">
+      <UniqueIdentifier>{A7C2193C-2978-3ED1-86FD-36A28FC894A9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MidiCore\Source\ThirdParty\FluidSynth">
+      <UniqueIdentifier>{2CF91533-2A64-38FC-9595-9BF50B2E5A7F}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Source\ThirdParty\FluidSynth\FluidSynth.Build.cs">
+      <Filter>Plugins\MidiCore\Source\ThirdParty\FluidSynth</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin">
+      <UniqueIdentifier>{8B9EA3AA-3F08-37CF-9B29-D3CB2C9E2250}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64">
+      <UniqueIdentifier>{9F89551A-3154-3229-8433-4FECAFF42E1A}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64\libfluidsynth-3.dll">
+      <Filter>Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64</Filter>
+    </None>
+    <None Include="..\..\Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64\SDL3.dll">
+      <Filter>Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64</Filter>
+    </None>
+    <None Include="..\..\Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64\sndfile.dll">
+      <Filter>Plugins\MidiCore\Source\ThirdParty\FluidSynth\bin\Win64</Filter>
+    </None>
+    <Filter Include="Source\MidiR">
+      <UniqueIdentifier>{712A70B0-C00D-3850-92FB-AF2EBBD3D1A9}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Source\MidiR\MidiR.Build.cs">
+      <Filter>Source\MidiR</Filter>
+    </None>
+    <ClCompile Include="..\..\Source\MidiR\MidiR.cpp">
+      <Filter>Source\MidiR</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Source\MidiR\MidiR.h">
+      <Filter>Source\MidiR</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

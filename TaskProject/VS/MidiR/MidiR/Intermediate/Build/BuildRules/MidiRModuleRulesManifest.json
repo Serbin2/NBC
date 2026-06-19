@@ -1,0 +1,11 @@
+{
+	"SourceFiles": [
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Source\\MidiR\\MidiR.Build.cs",
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Plugins\\MidiCore\\Source\\MidiCoreEditor\\MidiCoreEditor.Build.cs",
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Plugins\\MidiCore\\Source\\MidiCore\\MidiCore.Build.cs",
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Plugins\\MidiCore\\Source\\ThirdParty\\FluidSynth\\FluidSynth.Build.cs",
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Source\\MidiR.Target.cs",
+		"C:\\Users\\njh10\\Documents\\NBC\\TaskProject\\VS\\MidiR\\MidiR\\Source\\MidiREditor.Target.cs"
+	],
+	"EngineVersion": "5.5.4"
+}
