@@ -122,6 +122,19 @@ bool FFluidSynthRenderer::Init(int32 SampleRate, const FString& SoundFontPath)
 
 void FFluidSynthRenderer::Shutdown()
 {
+	// 엔진 종료(GC 일괄 purge) 중에는 FluidSynth DLL/내부 전역의 정리 순서를 신뢰할 수
+	// 없다(이미 무효화된 메모리/DLL 을 건드려 종료 중 크래시). 프로세스가 곧 끝나면서
+	// OS 가 메모리·DLL 을 회수하므로 정리를 통째로 건너뛴다.
+	// (런타임 중 정상 파괴 — 액터/컴포넌트 삭제 — 에서는 평소대로 정리)
+	if (IsEngineExitRequested())
+	{
+		Synth    = nullptr;
+		Settings = nullptr;
+		Api      = nullptr;   // 일부러 delete 하지 않음(종료 중 정리 생략)
+		DllFluid = DllSndfile = DllSdl = nullptr;
+		return;
+	}
+
 	if (Api)
 	{
 		if (Synth)    Api->del_synth(Synth);

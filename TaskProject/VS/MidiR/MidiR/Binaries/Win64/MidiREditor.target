@@ -30592,6 +30592,22 @@
 			"Type": "NonUFS"
 		},
 		{
+			"Path": "$(ProjectDir)/Plugins/MidiCore/Content/Midi/goit.mid",
+			"Type": "NonUFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/MidiCore/Content/Midi/rocky_1.mid",
+			"Type": "NonUFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/MidiCore/Content/Midi/take5.mid",
+			"Type": "NonUFS"
+		},
+		{
+			"Path": "$(ProjectDir)/Plugins/MidiCore/Content/SoundFonts/GeneralUser-GS.sf2",
+			"Type": "NonUFS"
+		},
+		{
 			"Path": "$(ProjectDir)/Plugins/MidiCore/MidiCore.uplugin",
 			"Type": "UFS"
 		}

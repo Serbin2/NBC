@@ -3,12 +3,31 @@
 #include "Midi.h"                 // 내부 파서(CMidi/NoteSegment) — std 기반, 이 .cpp 안에서만 사용
 #include "Misc/FileHelper.h"      // FFileHelper::LoadFileToArray
 #include "Misc/Paths.h"
+#include "Interfaces/IPluginManager.h"   // 플러그인 동봉 리소스 경로(BaseDir)
 #include <cstring>                // strcmp
 
-// 상대 경로면 프로젝트 Content 디렉터리 기준으로 풀어 준다.
-static FString ResolveMidiPath(const FString& In)
+// 상대 경로면 프로젝트 Content → 플러그인 동봉본 순으로 실제 파일을 찾는다.
+FString UMidiBlueprintLibrary::ResolveMidiResourcePath(const FString& In, const FString& PluginSubDir)
 {
-	return FPaths::IsRelative(In) ? FPaths::Combine(FPaths::ProjectContentDir(), In) : In;
+	if (In.IsEmpty() || !FPaths::IsRelative(In))
+		return In;   // 빈 값/절대경로는 그대로
+
+	// ① 프로젝트 Content 우선(프로젝트별 오버라이드 허용, 기존 동작 호환)
+	const FString ProjectPath = FPaths::Combine(FPaths::ProjectContentDir(), In);
+	if (FPaths::FileExists(ProjectPath))
+		return ProjectPath;
+
+	// ② 플러그인 동봉본 폴백: <Plugin>/Content/<SubDir>/<파일명>
+	if (TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("MidiCore")))
+	{
+		const FString PluginPath = FPaths::Combine(
+			Plugin->GetBaseDir(), TEXT("Content"), PluginSubDir, FPaths::GetCleanFilename(In));
+		if (FPaths::FileExists(PluginPath))
+			return PluginPath;
+	}
+
+	// ③ 어디에도 없으면 프로젝트 경로 반환(이후 로드에서 실패 로그가 남음)
+	return ProjectPath;
 }
 
 // 바이트 버퍼를 파서에 넘긴다. 성공 시 true 와 함께 OutMidi 를 채운다.
@@ -33,7 +52,7 @@ static bool ParseBytes(const uint8* Data, int32 Size, CMidi*& OutMidi)
 // 파일을 바이트 버퍼로 읽어 파서에 넘긴다(언리얼식 입력 경로).
 static bool LoadAndParse(const FString& FilePath, TArray<uint8>& OutBytes, CMidi*& OutMidi)
 {
-	if (!FFileHelper::LoadFileToArray(OutBytes, *ResolveMidiPath(FilePath)))
+	if (!FFileHelper::LoadFileToArray(OutBytes, *UMidiBlueprintLibrary::ResolveMidiResourcePath(FilePath, TEXT("Midi"))))
 		return false;
 	return ParseBytes(OutBytes.GetData(), OutBytes.Num(), OutMidi);
 }

@@ -36,6 +36,51 @@
     <Filter Include="Plugins\MidiCore\Source">
       <UniqueIdentifier>{FAB96F56-4F92-3125-841B-4D36A5F15958}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Plugins\MidiCore\Source\MidiCoreEditor">
+      <UniqueIdentifier>{ED12FCA0-7B1F-3748-9558-E95099C0C44F}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\MidiCoreEditor.Build.cs">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Source\MidiCoreEditor\Private">
+      <UniqueIdentifier>{0C802D07-F787-3BCD-9B81-D94C3147D117}</UniqueIdentifier>
+    </Filter>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\AssetTypeActions_MidiFile.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\AssetTypeActions_MidiFile.h">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\MidiAssetPreview.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\MidiAssetPreview.h">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\MidiCoreEditorModule.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\MidiFileFactory.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCoreEditor\Private\MidiFileFactory.h">
+      <Filter>Plugins\MidiCore\Source\MidiCoreEditor\Private</Filter>
+    </ClCompile>
+    <None Include="..\..\Plugins\MidiCore\MidiCore.uplugin">
+      <Filter>Plugins\MidiCore</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Config">
+      <UniqueIdentifier>{D7DBE78F-B4D7-3556-9B1D-5FFE9299C5FC}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Config\FilterPlugin.ini">
+      <Filter>Plugins\MidiCore\Config</Filter>
+    </None>
+    <Filter Include="Plugins\MidiCore\Resources">
+      <UniqueIdentifier>{5EEA2A3E-4E74-3372-A9BA-F7E123AC1970}</UniqueIdentifier>
+    </Filter>
+    <None Include="..\..\Plugins\MidiCore\Resources\THIRD_PARTY_NOTICES.md">
+      <Filter>Plugins\MidiCore\Resources</Filter>
+    </None>
     <Filter Include="Plugins\MidiCore\Source\MidiCore">
       <UniqueIdentifier>{33865D81-53C0-38B5-BEFC-486143EF839F}</UniqueIdentifier>
     </Filter>
@@ -60,6 +105,9 @@
     <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiCoreModule.cpp">
       <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiFileAsset.cpp">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Private\MidiPianoRollActor.cpp">
       <Filter>Plugins\MidiCore\Source\MidiCore\Private</Filter>
     </ClCompile>
@@ -78,6 +126,9 @@
     <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiCoreApi.h">
       <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiFileAsset.h">
+      <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\MidiPianoRollActor.h">
       <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
     </ClCompile>
@@ -87,9 +138,6 @@
     <ClCompile Include="..\..\Plugins\MidiCore\Source\MidiCore\Public\Util.h">
       <Filter>Plugins\MidiCore\Source\MidiCore\Public</Filter>
     </ClCompile>
-    <None Include="..\..\Plugins\MidiCore\MidiCore.uplugin">
-      <Filter>Plugins\MidiCore</Filter>
-    </None>
     <Filter Include="Plugins\MidiCore\Source\ThirdParty">
       <UniqueIdentifier>{A7C2193C-2978-3ED1-86FD-36A28FC894A9}</UniqueIdentifier>
     </Filter>

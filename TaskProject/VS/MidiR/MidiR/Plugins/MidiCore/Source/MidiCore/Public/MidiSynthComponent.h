@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "CoreMinimal.h"
 #include "Templates/Atomic.h"
+#include "HAL/CriticalSection.h"
 #include "Components/SynthComponent.h"
 #include "MidiSynthComponent.generated.h"
 
@@ -89,6 +90,9 @@ protected:
 	// UActorComponent
 	virtual void BeginPlay() override;
 
+	// UObject — 파괴 시 오디오를 먼저 멈춰 렌더 스레드 경합을 끊는다.
+	virtual void BeginDestroy() override;
+
 private:
 	// 평탄화된 스케줄 이벤트 (로드 후 불변 → 오디오 스레드에서 락 없이 읽음)
 	struct FSchedEvent
@@ -111,6 +115,10 @@ private:
 	// 불완전 타입 PIMPL — 원시 포인터로 수동 관리(UHT 생성 생성자/소멸자가 완전 타입을
 	// 요구하지 않도록). 생성/해제는 .cpp(완전 타입 가시)에서만 한다.
 	FFluidSynthRenderer* Renderer = nullptr;
+
+	// Renderer 는 오디오 렌더 스레드(OnGenerateAudio)와 게임 스레드(Init/소멸자)가 함께
+	// 만진다. 객체 자체의 use-after-free 를 막기 위해 생성·사용·해제를 직렬화한다.
+	FCriticalSection RendererCS;
 	TArray<FSchedEvent>   Schedule;
 	TArray<TArray<uint8>> SysExBlobs;
 	double DurationSeconds = 0.0;

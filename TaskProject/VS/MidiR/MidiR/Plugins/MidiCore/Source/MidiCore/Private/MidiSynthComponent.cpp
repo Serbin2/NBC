@@ -1,16 +1,13 @@
 ﻿#include "MidiSynthComponent.h"
 #include "FluidSynthRenderer.h"
 #include "MidiFileAsset.h"
+#include "MidiBlueprintLibrary.h"  // ResolveMidiResourcePath (프로젝트 Content → 플러그인 동봉본)
 #include "Midi.h"                 // 내부 파서(CMidi 등) — std 기반, 이 .cpp 안에서만 사용
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Misc/ScopeLock.h"       // FScopeLock (Renderer 접근 직렬화)
+#include "Engine/World.h"         // UWorld::IsGameWorld (에디터 미리듣기 분기)
 #include <cstring>                // strcmp
-
-// 상대 경로면 프로젝트 Content 디렉터리 기준으로 풀어 준다.
-static FString ResolveContentPath(const FString& In)
-{
-	return FPaths::IsRelative(In) ? FPaths::Combine(FPaths::ProjectContentDir(), In) : In;
-}
 
 UMidiSynthComponent::UMidiSynthComponent(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -21,6 +18,9 @@ UMidiSynthComponent::UMidiSynthComponent(const FObjectInitializer& ObjectInitial
 
 UMidiSynthComponent::~UMidiSynthComponent()
 {
+	// 오디오 렌더 스레드가 OnGenerateAudio 안에서 Renderer 를 쓰는 중일 수 있으므로
+	// 락을 잡고 해제한다(렌더 콜백과 상호배제). BeginDestroy 에서 이미 정지를 시도한다.
+	FScopeLock Lock(&RendererCS);
 	delete Renderer;
 	Renderer = nullptr;
 }
@@ -48,9 +48,13 @@ bool UMidiSynthComponent::Init(int32& SampleRate)
 	bLoopAtomic.Store(bLoop);
 	MuteMask.Store(0);
 
-	delete Renderer;                          // Start() 재호출 시 이전 인스턴스 정리
-	Renderer = new FFluidSynthRenderer();
-	const FString SfPath = ResolveContentPath(SoundFontPath);
+	{
+		// 이전 인스턴스 정리/생성은 렌더 콜백과 상호배제(포인터 교체 경합 방지).
+		FScopeLock Lock(&RendererCS);
+		delete Renderer;                      // Start() 재호출 시 이전 인스턴스 정리
+		Renderer = new FFluidSynthRenderer();
+	}
+	const FString SfPath = UMidiBlueprintLibrary::ResolveMidiResourcePath(SoundFontPath, TEXT("SoundFonts"));
 	if (!Renderer->Init(SampleRateHz, SfPath))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[MidiSynth] FluidSynth 준비 실패 → 무음으로 진행"));
@@ -66,6 +70,10 @@ bool UMidiSynthComponent::Init(int32& SampleRate)
 
 int32 UMidiSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
+	// 이 콜백이 도는 동안 게임 스레드가 Renderer 를 delete 하지 못하도록 잡아 둔다.
+	// (정상 재생 중엔 게임 스레드가 락을 잡지 않으므로 항상 즉시 획득 → 글리치 없음)
+	FScopeLock Lock(&RendererCS);
+
 	if (!Renderer || !Renderer->IsValid())
 	{
 		FMemory::Memzero(OutAudio, NumSamples * sizeof(float));
@@ -162,6 +170,19 @@ void UMidiSynthComponent::BeginPlay()
 	}
 }
 
+void UMidiSynthComponent::BeginDestroy()
+{
+	// 액터/컴포넌트가 파괴되기 시작하면 먼저 합성을 멈춰 오디오 렌더 콜백을 끊는다.
+	// (소멸자의 Renderer 해제가 렌더 스레드와 겹치지 않도록 경합 창을 최소화)
+	bPlaying.Store(false);
+	if (bStarted)
+	{
+		Stop();             // USynthComponent::Stop — 오디오 소스 정지
+		bStarted = false;
+	}
+	Super::BeginDestroy();
+}
+
 // ──────────────────────────────────────────────
 // 스케줄 구성(게임스레드) / 송출(오디오스레드)
 // ──────────────────────────────────────────────
@@ -174,7 +195,7 @@ void UMidiSynthComponent::BuildSchedule()
 		return;
 	}
 
-	const FString Full = ResolveContentPath(MidiFilePath);
+	const FString Full = UMidiBlueprintLibrary::ResolveMidiResourcePath(MidiFilePath, TEXT("Midi"));
 	TArray<uint8> Bytes;
 	if (!FFileHelper::LoadFileToArray(Bytes, *Full))
 	{
@@ -375,6 +396,20 @@ void UMidiSynthComponent::PlayMidi()
 	bPlaying.Store(true);
 	if (!bStarted)
 	{
+		// 에디터(비게임) 월드에서 미리듣기할 때:
+		// PIE가 아니면 오디오 디바이스가 'game ticking'이 아니라서, UI 사운드로
+		// 표시된 보이스만 렌더된다(엔진 AudioDevice.cpp: bGameTicking || bIsUISound).
+		// 따라서 미리듣기는 UI/프리뷰 2D 사운드로 만들어 리스너 위치·PIE 여부와
+		// 무관하게 들리도록 한다. (Start() 가 이 플래그들을 내부 오디오 컴포넌트로 복사)
+		if (UWorld* W = GetWorld())
+		{
+			if (!W->IsGameWorld())
+			{
+				bIsUISound           = true;
+				bIsPreviewSound      = true;
+				bAllowSpatialization = false;
+			}
+		}
 		Start();          // → Init() → 오디오 생성 시작
 		bStarted = true;
 	}

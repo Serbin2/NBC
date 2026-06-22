@@ -3,7 +3,7 @@
 최종 목표: MidiPrac의 MIDI 파서/재생을 **언리얼 엔진(UE5) 플러그인**으로 만들기
 (트랙별 피아노롤 시각화 + FluidSynth 사운드폰트 재생).
 
-마지막 업데이트: **2026-06-20**
+마지막 업데이트: **2026-06-22**
 
 ---
 
@@ -69,18 +69,32 @@
 - **신설 에디터 모듈 `MidiCoreEditor`**(uplugin에 Type=Editor/PostEngineInit 추가): `UMidiFileFactory`(.mid/.midi 임포트, 드래그&드롭) · `FAssetTypeActions_MidiFile`(카테고리 Sounds, 우클릭 **Play/Stop** = `FToolMenuSection::GetActions`) · `FMidiAssetPreview`(에디터 월드에 transient 액터+신스 컴포넌트 스폰해 PIE 없이 재생/정지).
 - **컴포넌트 디테일 미리듣기 버튼**: `UMidiSynthComponent`에 `PreviewPlay`/`PreviewStop`(CallInEditor) — 배치된 컴포넌트를 에디터에서 바로 청취(가장 확실한 경로).
 
+### 에디터 미리듣기 무음 + 크래시 2종 수정 (2026-06-22) — 모두 사용자 검증 완료
+미리듣기/삭제/종료 과정에서 드러난 버그 3개를 잡음. 빌드 0에러.
+- **에디터 미리듣기 무음**: 비게임(에디터) 월드에선 오디오 디바이스가 `bGameTicking==false`라 **`bIsUISound` 보이스만 렌더**(엔진 `AudioDevice.cpp`: `bGameTicking || WaveInstance->bIsUISound`). 일반 `USynthComponent`는 `bIsUISound=false`라 PIE에선 들리고 에디터에선 무음. → `PlayMidi()`에서 `Start()` 전에 **비게임 월드면** `bIsUISound=true`/`bIsPreviewSound=true`/`bAllowSpatialization=false` 설정(게임 월드/PIE는 그대로). `Init`/`OnGenerateAudio`가 도는데도 무음이면 이 케이스.
+- **재생 중 액터 삭제 크래시(AV)**: 콜스택 `~UMidiSynthComponent → ~FFluidSynthRenderer → Shutdown → delete_fluid_*`. 오디오 렌더 스레드가 `OnGenerateAudio`에서 `fluid_synth_write_float`를 도는 중 게임 스레드 GC 소멸자가 `delete Renderer`로 같은 fluid 객체를 해제 → **use-after-free**. → `FCriticalSection RendererCS`로 Renderer **생성(`Init`)·사용(`OnGenerateAudio`)·해제(소멸자)** 직렬화 + **`BeginDestroy()`** 오버라이드에서 먼저 `Stop()`으로 렌더 콜백 차단(경합 창 최소화).
+- **엔진 종료 시 크래시(AV)**: 종료 시 GC 일괄 purge가 소멸자→`Shutdown`→`delete_fluid_settings` 호출 → 종료 시점엔 FluidSynth DLL/내부 전역 정리 순서가 깨져 무효 메모리 접근. (런타임 중 삭제에선 정상이라 종료 특이 문제로 확정) → `Shutdown()` 진입 시 **`IsEngineExitRequested()`면 정리를 통째로 스킵**(프로세스 종료로 OS가 메모리·DLL 회수). 런타임 중 정상 파괴에선 기존대로 정리.
+- 교훈: **`USynthComponent` 파생이 외부 네이티브 리소스를 들 때**, 오디오 렌더 스레드와 GC 소멸자 수명을 반드시 상호배제하고(락 또는 `ISoundGenerator` 패턴), **종료 시 외부 DLL 정리는 건너뛴다**.
+
+### 배포 가능한 자급자족 플러그인 패키징 (2026-06-22) — 타 프로젝트 동작 검증 완료
+플러그인만 넣으면 추가 설정 없이 동작하도록 자급자족화 + 배포본 산출.
+- **자급자족 경로 해석**: `UMidiBlueprintLibrary::ResolveMidiResourcePath(In, PluginSubDir)` 신설 — 상대경로를 ①프로젝트 `Content/<In>` → ②플러그인 동봉본 `<Plugin>/Content/<SubDir>/<파일명>`(`IPluginManager` BaseDir) 순으로 해석. 컴포넌트/액터/`LoadMidiNotes`가 모두 경유 → **플러그인만 넣어도 동봉 사운드폰트로 소리**, 프로젝트에 `.sf2` 두면 오버라이드. 기존 `ResolveContentPath`(컴포넌트)·`ResolveMidiPath`(라이브러리) 중복 제거하고 이 함수로 통일.
+- **동봉**: `GeneralUser-GS.sf2`(32MB)·예제 `.mid` 3종을 `Plugins/MidiCore/Content/{SoundFonts,Midi}/`로 복사(비에셋 raw; FluidSynth `sfload`·파서가 디스크 파일을 직접 읽어 `.uasset` 쿠킹 대상 아님). `MidiCore.Build.cs`에서 `RuntimeDependencies.Add(..., StagedFileType.NonUFS)`로 스테이징(`PluginDirectory` 기준).
+- **라이선스/문서**: `Resources/THIRD_PARTY_NOTICES.md`(FluidSynth·sndfile LGPL-2.1 / SDL3 zlib / GeneralUser-GS; 동적 로드+미수정 DLL이라 LGPL 동적링크 충족), `LICENSE`(MIT, 저작권자 placeholder), `README.md`. uplugin: VersionName 1.0·설명·`CanContainContent:true`.
+- **⚠️ `RunUAT BuildPlugin` 실패(엔진 버그)**: 설치형 UE 5.5 UBT 회귀 — `AddAllValidModulesToTarget`에서 `GetModuleRulesType()`가 null인데 null-forgiving(`!`)으로 통과 → `IsValidForTarget(null)` `ArgumentNullException`. 우리 코드 무관(코드 빌드는 0에러, EngineVersion 제거 후에도 동일), RiderLink 등 타 플러그인도 같은 스택. **→ 수동 패키징으로 동등 산출**: `Dist/MidiCore`(Source+Binaries/Win64[DLL5종+.modules]+Content+Resources+LICENSE/README/uplugin, Intermediate 제외) + `Dist/MidiCore-1.0-UE5.5-Win64.zip`(33MB). Source 포함이라 타 엔진 마이너버전은 리빌드, 동일 5.5는 동봉 바이너리로 무컴파일 로드. **빈 프로젝트 압축해제 → 정상 동작 사용자 확인.**
+
 ---
 
 ## ▶ 다음 세션 시작점
 
-1. **(사용자) 청취 확인**: 에디터에서 아무 액터에 `Midi Synth Component` 추가(또는 빈 액터 배치 후 컴포넌트 부착) → `MidiFilePath=goit.mid` → **Play**로 소리 확인. BP에서 `SeekSeconds`/`PauseMidi`/`SetPlaybackSpeed` 동작 확인.
-   - 소리가 없으면 Output Log에서 `[MidiSynth]` 로그 확인(사운드폰트/DLL 로드 실패 여부).
-2. **(사용자) 동기화 확인**: 피아노롤 액터 + 신스 컴포넌트 같이 두고 Play → 재생바가 소리와 맞는지. 어긋나면 디테일에서 `PlaybackOffsetSeconds`로 미세 조정(+면 앞당김).
-3. **(사용자) 컨트롤 확인**: BP에서 `SetTranspose`/`SetChannelMute`/`SetLoop` 호출(또는 디테일 `Transpose`/`bLoop`)로 조옮김·음소거·반복 동작 청취 확인.
-4. **(사용자) 에셋/미리듣기 확인**: Content Browser로 `.mid` 드래그 → `MIDI File` 에셋 생성(디테일에 트랙/노트/길이) → 에셋 **우클릭 Play/Stop** 청취. 신스 컴포넌트/피아노롤 액터에 `MidiAsset` 지정. 컴포넌트 디테일 **Preview Play/Stop** 버튼도 확인. (우클릭이 무음이면 컴포넌트 버튼으로 폴백 + Output Log `[MidiSynth]`)
-5. 그다음 후보:
+- ✅ **청취/동기화/컨트롤 검증 완료**: 신스 컴포넌트 Play 소리, 피아노롤 재생바 동기화, 조옮김/음소거/반복 모두 확인.
+- ✅ **에셋/미리듣기 검증 완료**: `.mid` 드래그 임포트, 에셋 우클릭 Play/Stop, 컴포넌트 Preview 버튼 청취 확인.
+- ✅ **크래시/무음 수정 검증 완료(2026-06-22)**: 에디터 미리듣기 소리 남, 재생 중 액터 삭제·에디터 종료 모두 크래시 없음.
+- ✅ **배포 패키징 검증 완료(2026-06-22)**: 자급자족화 + `Dist/MidiCore`(+zip) 산출, 빈 프로젝트에서 정상 동작 확인.
+
+다음 후보(미착수):
    - **정밀 타이밍**: `OnGenerateAudio` 블록 내 샘플오프셋 세분화.
-   - **패키징**: 사운드폰트/DLL/에셋이 Shipping 빌드에 스테이징/쿠킹되는지 검증, FluidSynth LGPL 고지.
+   - **패키징 마감**: 정식 `RunUAT BuildPlugin`(엔진 버그 우회: 소스빌드 엔진/엔진 Verify 후 재시도), 배포 전 `LICENSE` 저작권자 기입, sf2 Git LFS, Shipping 풀 쿠킹·Mac/Linux 타깃.
    - **에셋 마감**: 정식 Reimport(`UAssetImportData`)·썸네일·전용 에디터.
    - **시각화 강화**: 현재 울리는 노트 하이라이트 / 2D UMG 피아노롤.
 

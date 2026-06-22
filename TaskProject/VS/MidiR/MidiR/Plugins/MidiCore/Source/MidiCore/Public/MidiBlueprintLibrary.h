@@ -28,8 +28,15 @@ class MIDICORE_API UMidiBlueprintLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 
 public:
+	// 미디/사운드폰트 리소스 경로 해석. 상대경로면
+	//   ① 프로젝트 Content/<In>  →  ② 플러그인 동봉본 <Plugin>/Content/<PluginSubDir>/<파일명>
+	// 순으로 존재하는 파일을 찾는다(사용자 프로젝트 오버라이드 우선, 없으면 플러그인 동봉본).
+	// 절대경로는 그대로 반환. 어디서도 못 찾으면 프로젝트 Content 경로를 반환(로드 시 실패 로그).
+	// PluginSubDir 예: "SoundFonts", "Midi".
+	static FString ResolveMidiResourcePath(const FString& In, const FString& PluginSubDir);
+
 	// .mid 파일을 파싱해 기본 정보를 돌려준다. 성공하면 true.
-	// FilePath 가 상대 경로면 프로젝트 Content 폴더 기준으로 해석한다.
+	// FilePath 가 상대 경로면 프로젝트 Content → 플러그인 동봉본 순으로 해석한다.
 	UFUNCTION(BlueprintCallable, Category = "Midi", meta = (DisplayName = "Load MIDI Info"))
 	static bool LoadMidiInfo(const FString& FilePath,
 	                         int32& OutFormat, int32& OutTrackCount,
