@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MidiCore — 재생 흐름 (Playback Flow)</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1c2330; --line:#2b3440;
+    --ink:#e6edf3; --muted:#9aa7b4; --code:#cdd9e5;
+    --game:#4f9dff;        /* 게임 스레드 */
+    --game-bg:#0f2236;
+    --audio:#ff8a5b;       /* 오디오 렌더 스레드 */
+    --audio-bg:#2a1810;
+    --engine:#b07cff;      /* 엔진(믹서) */
+    --engine-bg:#1f1730;
+    --data:#3fce8f;        /* 데이터/리소스 */
+    --data-bg:#0f2a20;
+    --accent:#ffd166;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Segoe UI",system-ui,-apple-system,"Malgun Gothic",sans-serif;
+    line-height:1.6; padding:0 0 80px;
+  }
+  code,.mono{font-family:"Cascadia Code",Consolas,"Courier New",monospace;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px;}
+  header.hero{
+    background:linear-gradient(135deg,#10151c,#1a2230);
+    border-bottom:1px solid var(--line); padding:42px 0 34px; margin-bottom:34px;
+  }
+  header.hero h1{margin:0 0 8px;font-size:30px;letter-spacing:.3px;}
+  header.hero p{margin:0;color:var(--muted);font-size:15px;}
+  .tag{display:inline-block;font-size:12px;color:var(--accent);
+    border:1px solid #3a3320;background:#221d10;border-radius:20px;padding:2px 12px;margin-bottom:14px;}
+
+  h2.section{font-size:13px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);
+    margin:46px 0 16px;border-bottom:1px solid var(--line);padding-bottom:8px;}
+
+  /* 범례 */
+  .legend{display:flex;flex-wrap:wrap;gap:10px 18px;margin:0 0 8px;}
+  .legend .item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);}
+  .dot{width:13px;height:13px;border-radius:3px;display:inline-block;}
+  .dot.game{background:var(--game)} .dot.audio{background:var(--audio)}
+  .dot.engine{background:var(--engine)} .dot.data{background:var(--data)}
+
+  /* 카드(노드) */
+  .node{border:1px solid var(--line);border-radius:12px;background:var(--panel);
+    padding:14px 16px;position:relative;}
+  .node .ttl{font-weight:600;font-size:15px;margin:0 0 4px;display:flex;align-items:center;gap:8px;}
+  .node .sub{color:var(--muted);font-size:13px;margin:0;}
+  .node .ref{font-family:"Cascadia Code",Consolas,monospace;font-size:11.5px;color:#7d8aa0;margin-top:6px;}
+  .node.game{border-left:4px solid var(--game);}
+  .node.audio{border-left:4px solid var(--audio);}
+  .node.engine{border-left:4px solid var(--engine);}
+  .node.data{border-left:4px solid var(--data);}
+  .badge{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;border-radius:6px;
+    padding:2px 7px;font-weight:700;}
+  .badge.game{background:var(--game-bg);color:var(--game);border:1px solid #25517f;}
+  .badge.audio{background:var(--audio-bg);color:var(--audio);border:1px solid #6e3a20;}
+  .badge.engine{background:var(--engine-bg);color:var(--engine);border:1px solid #4a3a70;}
+  .badge.data{background:var(--data-bg);color:var(--data);border:1px solid #1f6045;}
+
+  .flow{display:flex;flex-direction:column;align-items:stretch;gap:0;}
+  .arrow{align-self:center;color:#56626f;font-size:22px;line-height:1;margin:7px 0;}
+  .arrow small{display:block;font-size:11px;color:#6f7b88;font-family:"Cascadia Code",monospace;text-align:center;}
+
+  /* 두 레인 (스레드) */
+  .lanes{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;}
+  .lane{border:1px dashed var(--line);border-radius:14px;padding:16px;}
+  .lane.game{background:linear-gradient(180deg,rgba(79,157,255,.06),transparent);}
+  .lane.audio{background:linear-gradient(180deg,rgba(255,138,91,.06),transparent);}
+  .lane h3{margin:0 0 4px;font-size:14px;}
+  .lane .lanenote{color:var(--muted);font-size:12px;margin:0 0 14px;}
+  .lane.game h3{color:var(--game)} .lane.audio h3{color:var(--audio)}
+
+  /* 원자적 다리 */
+  .bridge{border:1px solid var(--line);border-radius:12px;background:var(--panel2);
+    padding:16px;margin:18px 0;}
+  .bridge .ttl{font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:10px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{font-family:"Cascadia Code",Consolas,monospace;font-size:12px;color:var(--code);
+    background:#10161f;border:1px solid var(--line);border-radius:7px;padding:4px 9px;}
+  .chip b{color:var(--accent);font-weight:600;}
+  .twoway{text-align:center;color:var(--muted);font-size:12px;margin:10px 0 2px;}
+
+  /* 블록 루프(심장부) */
+  .loopbox{border:1px solid #6e3a20;border-radius:14px;background:var(--audio-bg);padding:6px 18px 18px;}
+  .loopbox > .lbl{display:inline-block;margin:14px 0 4px;font-size:12px;letter-spacing:1px;
+    text-transform:uppercase;color:var(--audio);font-weight:700;}
+  ol.steps{counter-reset:s;list-style:none;margin:8px 0 0;padding:0;}
+  ol.steps li{position:relative;padding:11px 14px 11px 46px;border:1px solid var(--line);
+    border-radius:10px;background:rgba(0,0,0,.18);margin-bottom:9px;}
+  ol.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:12px;top:11px;
+    width:22px;height:22px;border-radius:50%;background:var(--audio);color:#1a0e07;font-weight:700;
+    display:flex;align-items:center;justify-content:center;font-size:12px;}
+  ol.steps li .k{font-weight:600;}
+  ol.steps li .d{color:var(--muted);font-size:13px;}
+  ol.steps .codeline{font-family:"Cascadia Code",Consolas,monospace;font-size:12px;color:var(--accent);
+    background:#120b07;border:1px solid #3a2a1c;border-radius:6px;padding:2px 7px;display:inline-block;margin-top:5px;}
+  .pill{font-size:11px;border-radius:20px;padding:1px 9px;border:1px solid var(--line);color:var(--muted);margin-left:6px;}
+
+  .keyfmt{font-family:"Cascadia Code",Consolas,monospace;color:var(--accent);}
+  .note{color:var(--muted);font-size:13px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:760px){.lanes,.grid2{grid-template-columns:1fr;}}
+  footer{color:#6f7b88;font-size:12px;text-align:center;margin-top:50px;border-top:1px solid var(--line);padding-top:18px;}
+  .filehdr{font-family:"Cascadia Code",Consolas,monospace;font-size:12px;color:#7d8aa0;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">MidiCore · UE5.5 Plugin</span>
+    <h1>MIDI 재생 흐름 한눈에 보기</h1>
+    <p>파일 로드 → 이벤트 평탄화 → 오디오 믹서의 pull → 블록 단위 디스패치 → FluidSynth 합성 → 출력·시각화 동기화</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- 범례 -->
+  <div class="legend">
+    <span class="item"><span class="dot game"></span> 게임 스레드 (Game Thread)</span>
+    <span class="item"><span class="dot engine"></span> 엔진 / 오디오 믹서 (Audio Mixer)</span>
+    <span class="item"><span class="dot audio"></span> 오디오 렌더 스레드 (Audio Render Thread)</span>
+    <span class="item"><span class="dot data"></span> 데이터 / 리소스</span>
+  </div>
+  <p class="note">핵심: 재생 모델은 콘솔판과 같은 <b>“시간순 이벤트 배열 + 커서 전진”</b> 이지만, 루프를 도는 시계가
+  <span class="keyfmt">Sleep</span> 게임 루프가 아니라 <b>오디오 믹서가 당겨가는(pull) 콜백</b> 으로 바뀌었습니다.</p>
+
+  <!-- ─────────── PHASE 1 ─────────── -->
+  <h2 class="section">① 준비 단계 — 게임 스레드에서 1회</h2>
+  <div class="flow">
+
+    <div class="node data">
+      <p class="ttl"><span class="badge data">DATA</span> MIDI 출처</p>
+      <p class="sub"><code>MidiAsset</code>(임포트된 <code>.mid</code> 바이트) 우선, 없으면 <code>MidiFilePath</code> 로드.</p>
+      <p class="ref">MidiSynthComponent.cpp · BuildSchedule() :189</p>
+    </div>
+
+    <div class="arrow">▼<small>raw bytes</small></div>
+
+    <div class="node game">
+      <p class="ttl"><span class="badge game">GAME</span> 이벤트 평탄화 → 스케줄</p>
+      <p class="sub">모든 트랙의 채널/SysEx 이벤트를 한 배열 <code>Schedule[]</code> 로 모으고
+        각 이벤트에 절대 재생 시각 <span class="keyfmt">TimeSeconds = absTimeMs/1000</span> 저장.
+        같은 시각은 파일 순서 유지하도록 <b>StableSort</b>. 로드 후 <b>불변</b> → 오디오 스레드가 락 없이 읽음.</p>
+      <p class="ref">BuildScheduleFromBytes() :211 · 콘솔판 CollectEvents 이식</p>
+    </div>
+
+    <div class="arrow">▼<small>Start()</small></div>
+
+    <div class="node game">
+      <p class="ttl"><span class="badge game">GAME</span> Start() — 합성 시작(루프 아님!)</p>
+      <p class="sub"><code>Init()</code> 에서 <code>FFluidSynthRenderer</code> 생성 + 사운드폰트 로드,
+        그 뒤 <b>절차적 사운드</b> <code>USynthSound</code> 를 내부 <code>UAudioComponent</code> 로 <code>Play()</code>.
+        <code>bIsSynthPlaying = true</code>. 여기서 직접 오디오를 만들지 않는다 — 그냥 “재생 중” 상태로 등록만.</p>
+      <p class="ref">USynthComponent::Start() :443 · MidiSynthComponent::Init() :31</p>
+    </div>
+  </div>
+
+  <!-- ─────────── 원자적 다리 ─────────── -->
+  <h2 class="section">② 스레드 사이의 다리 — atomic / lock</h2>
+  <div class="bridge">
+    <p class="ttl"><span class="badge game">GAME</span> → <span class="badge audio">AUDIO</span> 제어값 전달</p>
+    <p class="note" style="margin:0 0 12px">블루프린트/디테일 패널 컨트롤은 게임 스레드에서 <b>atomic 에 쓰고</b>,
+      오디오 스레드가 블록 시작에 <b>스냅샷으로 읽는다.</b> 객체 수명(생성·해제)은 <span class="keyfmt">RendererCS</span> 락으로 직렬화.</p>
+    <div class="chips">
+      <span class="chip"><b>bPlaying</b> / bPaused</span>
+      <span class="chip"><b>SpeedAtomic</b></span>
+      <span class="chip"><b>GainAtomic</b> + bGainDirty</span>
+      <span class="chip"><b>PendingSeek</b> (≥0 = 탐색요청)</span>
+      <span class="chip"><b>TransposeAtomic</b></span>
+      <span class="chip"><b>MuteMask</b> (16비트)</span>
+      <span class="chip"><b>bLoopAtomic</b></span>
+    </div>
+    <div class="twoway">▲ 위 방향 · 아래는 역방향(오디오 → 게임) ▼</div>
+    <div class="chips">
+      <span class="chip"><b>ReportedPosition</b> → GetPlayPositionSeconds()</span>
+      <span class="chip mono">FCriticalSection <b>RendererCS</b> (수명 보호)</span>
+    </div>
+  </div>
+
+  <!-- ─────────── PHASE 2: pull 체인 ─────────── -->
+  <h2 class="section">③ 재생 단계 — 오디오 믹서가 블록을 당겨간다 (pull)</h2>
+  <div class="flow">
+    <div class="node engine">
+      <p class="ttl"><span class="badge engine">ENGINE</span> 오디오 믹서 소스 매니저</p>
+      <p class="sub">렌더 버퍼가 빌 때마다(고정 타이머 아님) 절차적 사운드에서 다음 PCM 블록을 요청.
+        <code>bCanProcessAsync=true</code> 라 렌더 스레드 또는 비동기 오디오 태스크 스레드에서 호출될 수 있음.</p>
+      <p class="ref">FMixerSourceManager · USynthSound::Init :18 (bCanProcessAsync :26)</p>
+    </div>
+    <div class="arrow">▼<small>PCM 요청</small></div>
+
+    <div class="node engine">
+      <p class="ttl"><span class="badge engine">ENGINE</span> USynthSound::OnGeneratePCMAudio()</p>
+      <p class="sub">float 출력 버퍼를 준비하고 소유 컴포넌트로 전달.</p>
+      <p class="ref">SynthComponent.cpp :45 → :60 OwningSynthComponent->OnGeneratePCMAudio()</p>
+    </div>
+    <div class="arrow">▼</div>
+
+    <div class="node engine">
+      <p class="ttl"><span class="badge engine">ENGINE</span> USynthComponent::OnGeneratePCMAudio()</p>
+      <p class="sub"><code>PumpPendingMessages()</code> 후 <code>bIsSynthPlaying</code> 이면
+        가상 함수 <code>OnGenerateAudio()</code> 호출(정지면 무음 반환).</p>
+      <p class="ref">SynthComponent.cpp :427 → :438</p>
+    </div>
+    <div class="arrow">▼<small>virtual 오버라이드</small></div>
+
+    <!-- ─────────── 심장부: 블록 루프 ─────────── -->
+    <div class="loopbox">
+      <span class="lbl">◆ UMidiSynthComponent::OnGenerateAudio() — 블록 1개당 1회 (MidiSynthComponent.cpp :71)</span>
+      <ol class="steps">
+        <li>
+          <span class="k">락 획득</span> <span class="pill">수명 보호</span>
+          <div class="d">게임 스레드가 이 블록 도중 Renderer 를 delete 하지 못하게 <code>RendererCS</code> 잠금.</div>
+          <span class="codeline">FScopeLock Lock(&amp;RendererCS); :75</span>
+        </li>
+        <li>
+          <span class="k">제어 스냅샷</span>
+          <div class="d">게인 변경 반영, 탐색 요청 처리(<b>chase</b>), 이번 블록의 조옮김·음소거 마스크 확정, 일시정지 진입 엣지에서 AllNotesOff.</div>
+          <span class="codeline">PendingSeek.Exchange(-1) → DoSeek() :92 · DoSeek :346</span>
+        </li>
+        <li>
+          <span class="k">시간 전진 (= 시계)</span>
+          <div class="d">이번 블록에서 만들 프레임 수만큼 곡 시간을 전진. 벽시계가 아니라 <b>생성 샘플 수</b> 기준 → 드리프트 없음.</div>
+          <span class="codeline">PlayTimeSeconds += Frames / SampleRateHz * Speed; :130</span>
+        </li>
+        <li>
+          <span class="k">커서 디스패치</span> <span class="pill">콘솔 루프와 동일</span>
+          <div class="d">재생 시각에 도달한 이벤트를 전부 드레인해 신스로 송출. <b>루프 1회 = 오디오 블록 1개.</b></div>
+          <span class="codeline">while (Schedule[Cursor].TimeSeconds &lt;= PlayTimeSeconds) SendSchedEvent(...); ++Cursor; :132</span>
+        </li>
+        <li>
+          <span class="k">끝 / 반복 처리</span>
+          <div class="d">끝 도달 시 <code>bLoop</code> 면 커서·시간 0으로 되감기, 아니면 전진만 멈추고 잔향은 계속 렌더.</div>
+          <span class="codeline">Cursor=0; PlayTimeSeconds=0  ·또는·  bPlaying=false :138</span>
+        </li>
+        <li>
+          <span class="k">위치 게시 + 합성</span>
+          <div class="d"><code>ReportedPosition</code> 갱신(시각화가 읽음) 후 FluidSynth 로 이 블록의 PCM 을 렌더.</div>
+          <span class="codeline">ReportedPosition.Store(PlayTimeSeconds) :155 · Renderer->RenderFloat(OutAudio, Frames) :157</span>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- SendSchedEvent → FluidSynth -->
+  <h2 class="section">④ 이벤트 송출 → 합성 → 출력</h2>
+  <div class="lanes">
+    <div class="lane audio">
+      <h3>SendSchedEvent() — 메시지 변환</h3>
+      <p class="lanenote">패킹된 이벤트를 FluidSynth API 호출로 (대상은 OS MIDI 출력이 아니라 인프로세스 신스).</p>
+      <div class="flow">
+        <div class="node audio"><p class="ttl">0x90/0x80 NoteOn/Off</p><p class="sub">조옮김 적용·음소거 차단, <code>NoteMap</code> 로 실제 음높이 추적.</p></div>
+        <div class="arrow">▼</div>
+        <div class="node audio"><p class="ttl">0xB0/0xC0/0xE0/0xD0/0xA0</p><p class="sub">CC · Program · PitchBend · Pressure 전달.</p></div>
+        <div class="arrow">▼</div>
+        <div class="node audio"><p class="ttl">SysEx (Type 1)</p><p class="sub">선두 0xF0 복원 후 <code>Renderer->SysEx()</code>.</p>
+        <p class="ref">SendSchedEvent() :284</p></div>
+      </div>
+    </div>
+
+    <div class="lane audio">
+      <h3>FluidSynthRenderer — PCM 생성</h3>
+      <p class="lanenote">컴포넌트마다 독립 인스턴스(자기 fluid_synth + 자기 사운드폰트).</p>
+      <div class="flow">
+        <div class="node audio"><p class="ttl">RenderFloat()</p><p class="sub"><code>fluid_synth_write_float</code> 로 인터리브 스테레오 PCM 생성.</p></div>
+        <div class="arrow">▼<small>float[] OutAudio</small></div>
+        <div class="node engine"><p class="ttl"><span class="badge engine">ENGINE</span> 믹서 합산 / 서브믹스</p><p class="sub">다른 사운드와 믹싱·이펙트.</p></div>
+        <div class="arrow">▼</div>
+        <div class="node engine"><p class="ttl">🔊 오디오 디바이스 → 스피커</p>
+        <p class="sub">비게임 월드(에디터 미리듣기)는 <code>bIsUISound</code> 보이스만 렌더.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 시각화 동기화 -->
+  <h2 class="section">⑤ 시각화 동기화 — 같은 시계 공유</h2>
+  <div class="flow">
+    <div class="node audio">
+      <p class="ttl"><span class="badge audio">AUDIO</span> ReportedPosition.Store(PlayTimeSeconds)</p>
+      <p class="sub">오디오 스레드가 매 블록 현재 재생 위치를 게시.</p>
+      <p class="ref">MidiSynthComponent.cpp :155</p>
+    </div>
+    <div class="arrow">▼<small>atomic read</small></div>
+    <div class="node game">
+      <p class="ttl"><span class="badge game">GAME</span> AMidiPianoRollActor::Tick()</p>
+      <p class="sub"><code>bSyncToSynth</code> 면 같은 액터의 신스에서 <code>GetPlayPositionSeconds()</code> 를 읽어
+        재생바 위치로 사용 → 오디오·시각 드리프트 없음 (<code>PlaybackOffsetSeconds</code> 로 미세 보정).</p>
+      <p class="ref">MidiPianoRollActor::Tick · GetPlayPositionSeconds() :484</p>
+    </div>
+    <div class="arrow">▼</div>
+    <div class="node game">
+      <p class="ttl">🎹 재생바가 시간축(X)을 따라 이동</p>
+    </div>
+  </div>
+
+  <footer>
+    <span class="filehdr">MidiCore/Documentation/PlaybackFlow.html</span><br>
+    행 번호는 <code>MidiSynthComponent.cpp</code> 와 엔진 <code>SynthComponent.cpp</code>(UE 5.5) 기준입니다.
+  </footer>
+</div>
+</body>
+</html>

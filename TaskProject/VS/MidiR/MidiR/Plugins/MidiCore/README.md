@@ -35,6 +35,16 @@ follows the synth's audio clock (`bSyncToSynth`).
 So the plugin works out of the box, but you can drop your own `.sf2` into the
 project's `Content/` to override the soundfont.
 
+## Documentation
+See `Documentation/UserGuide.md` (English) or `Documentation/UserGuide.ko.md`
+(한국어) for the full Blueprint-exposed API reference — the Midi Synth Component,
+the Midi Piano Roll Actor, the MIDI file asset, and the Blueprint library, with
+all properties and functions.
+
+Open `Documentation/PlaybackFlow.html` in a browser for a visual walkthrough of
+how playback works end to end — MIDI parse → event schedule → the audio mixer's
+pull → per-block dispatch → FluidSynth → output and visualization sync.
+
 ## Licensing
 The plugin's own code is MIT (see `LICENSE`). Bundled third-party components
 (FluidSynth, libsndfile, SDL, GeneralUser GS) remain under their own licenses —
